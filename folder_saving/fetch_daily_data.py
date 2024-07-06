@@ -35,7 +35,8 @@ def get_routes_data(data):
 
 
 def fetch_route_data(type, nr):
-    response = requests.get(ROUTE_URL)
+    # Example: https://transport.tallinn.ee/data/tallinna-linn_bus_18.txt
+    response = requests.get(ROUTE_URL + f"{type}_{nr}.txt")
     today = datetime.now().strftime("%Y-%m-%d")
     os.makedirs(f"{ROUTE_DATA_DIR}/{today}", exist_ok=True)
     with open(
