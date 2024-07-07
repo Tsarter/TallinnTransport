@@ -17,5 +17,8 @@ def fetch_realtime_data():
 
 
 while True:
+    start_time = time.time()
     fetch_realtime_data()
-    time.sleep(30)
+    elapsed_time = time.time() - start_time
+    sleep_time = max(0, 30 - elapsed_time)
+    time.sleep(sleep_time)
