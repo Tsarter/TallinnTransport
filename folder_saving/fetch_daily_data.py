@@ -2,7 +2,7 @@
 
 import requests
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from config import (
     ROUTE_URL,
@@ -14,6 +14,7 @@ from config import (
     INTERRUPTIONS_URL,
     INTERRUPTIONS_DATA_DIR,
 )
+from notify_discord import notify_discord
 
 
 def get_routes_data(data):
@@ -81,6 +82,6 @@ def fetch_daily_data():
     fetch_stops_data()
     fetch_interruptions_data()
     get_routes_data(bus_time_data)
-
+    notify_discord()
 
 fetch_daily_data()
