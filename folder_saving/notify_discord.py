@@ -1,6 +1,7 @@
 import requests
 import os
 from datetime import datetime, timedelta
+from lock import lock_file, unlock_file
 
 from config import (
     DATA_DIR,
@@ -9,11 +10,29 @@ from config import (
     STOPS_DATA_DIR,
     INTERRUPTIONS_DATA_DIR,
     DISCORD_WEBHOOK_URL,
-    REALTIME_DATA_DIR
+    REALTIME_DATA_DIR,
+    LOCK_FILE
 )
 
 
-def notify_discord():
+
+
+def get_folder_size(path):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for file in filenames:
+            file_path = os.path.join(dirpath, file)
+            total_size += os.path.getsize(file_path)
+    return total_size / (1024 * 1024)  # Convert bytes to MB
+
+def get_file_count(path):
+    total_count = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for file in filenames:
+            total_count += 1
+    return total_count
+
+def main():
     today = datetime.now().strftime("%Y-%m-%d")
     yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
@@ -39,19 +58,10 @@ BUS TIMES DATA size: {BUS_TIMES_DATA_size:.2f} MB \n
         print(f"Failed to send message to Discord: {response.status_code}, {response.text}")
 
 
-def get_folder_size(path):
-    total_size = 0
-    for dirpath, dirnames, filenames in os.walk(path):
-        for file in filenames:
-            file_path = os.path.join(dirpath, file)
-            total_size += os.path.getsize(file_path)
-    return total_size / (1024 * 1024)  # Convert bytes to MB
-
-def get_file_count(path):
-    total_count = 0
-    for dirpath, dirnames, filenames in os.walk(path):
-        for file in filenames:
-            total_count += 1
-    return total_count
-
-notify_discord()
+def notify_discord():
+    lock_file_instance = lock_file(LOCK_FILE)
+    if lock_file_instance:
+        try:
+            notify_discord()
+        finally:
+            unlock_file(lock_file_instance)

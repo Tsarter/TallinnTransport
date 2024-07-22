@@ -13,9 +13,10 @@ from config import (
     STOPS_DATA_DIR,
     INTERRUPTIONS_URL,
     INTERRUPTIONS_DATA_DIR,
+    LOCK_FILE
 )
 from notify_discord import notify_discord
-
+from lock import lock_file, unlock_file
 
 def get_routes_data(data):
     rows = data.split("\n")
@@ -77,11 +78,19 @@ def fetch_interruptions_data():
 
 
 def fetch_daily_data():
-
-    bus_time_data = fetch_bus_times_data()
-    fetch_stops_data()
-    fetch_interruptions_data()
-    get_routes_data(bus_time_data)
-    notify_discord()
+    lock_file_instance = lock_file(LOCK_FILE)
+    if lock_file_instance:
+        try:
+            bus_time_data = fetch_bus_times_data()
+            fetch_stops_data()
+            fetch_interruptions_data()
+            get_routes_data(bus_time_data)
+        finally:
+            unlock_file(lock_file_instance)
+            notify_discord()
+    else:
+        time.sleep(10)
+        fetch_daily_data()
+        print("Failed to write, bc locked")
 
 fetch_daily_data()
