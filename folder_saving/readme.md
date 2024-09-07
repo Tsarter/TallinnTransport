@@ -26,3 +26,8 @@ To edit
 
 The service also includes `restart=always`
 Meaning that when it reboots or stops for any reason it also restarts. Essentialy at reboot it starts the script 2 times. (saw it in journal, kinda stupid imo)
+
+### Mounting harddrive
+
+Go to folder PUBLIC_TRANSPORT_PROJECT
+and use `sudo mount /dev/sda1 HardDrive/ `
