@@ -28,6 +28,8 @@ function preparePlaybackData(data) {
     const timestamp = feature.properties.timestamp;
     const lat = feature.geometry.coordinates[1];
     const lng = feature.geometry.coordinates[0];
+    const type = feature.properties.type;
+    const line = feature.properties.line;
 
     // Initialize the array if it doesn't exist
     if (!preparedData[timestamp]) {
@@ -35,7 +37,7 @@ function preparePlaybackData(data) {
     }
 
     // Push the coordinates into the array for the timestamp
-    preparedData[timestamp].push({ lat, lng });
+    preparedData[timestamp].push({ lat, lng, type, line });
   });
 
   // Convert the object back to an array of timestamps and positions
@@ -59,17 +61,24 @@ function startPlayback() {
 
       // Clear existing markers from the previous time step
       clearMarkers();
-
-      // Add markers for all buses at the current timestamp
-      positions.forEach(({ lat, lng }) => {
+      // Initialize markers and bind click event
+      positions.forEach(({ lat, lng, type, line }) => {
+        let color;
+        if (type === 1) {
+          color = "red"; // Trams
+        } else if (type === 2) {
+          color = "green"; // Buses
+        } else if (type === 3) {
+          color = "blue"; // Trolleys
+        }
         const marker = L.circleMarker([lat, lng], {
           radius: 5,
-          color: "red",
+          color: color,
           fillOpacity: 0.8,
         }).addTo(map);
 
-        // Bind a popup with the timestamp
-        marker.bindPopup(`Time: ${new Date(timestamp).toLocaleString()}`);
+        // Attach click event to marker to fetch and display route
+        marker.on("click", (e) => onMarkerClick(e, type, line));
       });
 
       // Update the current timestamp display
@@ -95,6 +104,14 @@ function clearMarkers() {
     }
   });
 }
+// Clear existing Polylines from the map
+function clearPolylines() {
+  map.eachLayer((layer) => {
+    if (layer instanceof L.Polyline) {
+      map.removeLayer(layer);
+    }
+  });
+}
 
 // Additional functions for play, pause, and reset
 document.getElementById("play").onclick = startPlayback;
@@ -110,4 +127,83 @@ function resetPlayback() {
   currentIndex = 0; // Reset index
   clearMarkers(); // Clear markers from the map
   document.getElementById("current-time").textContent = ""; // Clear the displayed time
+}
+
+// Function to decode the encoded polyline
+function decodePolyline(encoded) {
+  let points = [];
+  let index = 0,
+    len = encoded.length;
+  let lat = 0,
+    lng = 0;
+
+  while (index < len) {
+    let b,
+      shift = 0,
+      result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    let dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    let dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push([lat * 1e-5, lng * 1e-5]);
+  }
+
+  return points;
+}
+
+// Function to fetch and display the route when a marker is clicked
+function fetchAndDisplayRoute(type, lineNumber, marker) {
+  let vehicleType;
+  if (type === 1) vehicleType = "trol";
+  else if (type === 2) vehicleType = "bus";
+  else if (type === 3) vehicleType = "tram";
+
+  const routeFileName = `${vehicleType}_${lineNumber}_routes.txt`;
+
+  fetch(`routes_folder/${routeFileName}`)
+    .then((response) => response.text())
+    .then((routeData) => {
+      // Assuming the route data has the encoded polyline after each a-b, b-a block
+      const route = routeData.split("\n")[1]; // Simplified: using second line
+
+      // Decode the route
+      const routePoints = decodePolyline(route);
+
+      // Draw the route on the map
+      const polyline = L.polyline(routePoints, {
+        color: "blue",
+        weight: 5,
+        opacity: 0.7,
+      }).addTo(map);
+
+      // Optionally, bind popup to show route details
+      marker.bindPopup(`Route: ${vehicleType} ${lineNumber}`).openPopup();
+    })
+    .catch((error) => {
+      console.error("Error loading route data:", error);
+      marker.bindPopup("Route not available").openPopup();
+    });
+}
+
+// Marker click event handler
+function onMarkerClick(e, type, lineNumber) {
+  clearPolylines();
+  const marker = e.target;
+
+  // Fetch and display the route for this bus/tram/trolley line
+  fetchAndDisplayRoute(type, lineNumber, marker);
 }

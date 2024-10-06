@@ -10,9 +10,11 @@ all_features = []
 i = 0
 # Loop through all files in the folder
 for filename in sorted(os.listdir(folder)):
-    if i == 1000:
-        break
     i += 1
+    if i < 1000:
+        continue
+    if i == 1500:
+        break
     if filename.endswith(".json"):
         filepath = os.path.join(folder, filename)
 
