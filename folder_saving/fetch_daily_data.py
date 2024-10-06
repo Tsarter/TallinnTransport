@@ -2,7 +2,7 @@
 
 import requests
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 from config import (
     ROUTE_URL,
@@ -38,6 +38,7 @@ def get_routes_data(data):
 
 def fetch_route_data(type, nr):
     # Example: https://transport.tallinn.ee/data/tallinna-linn_bus_18.txt
+    nr = nr.lower()
     response = requests.get(ROUTE_URL + f"{type}_{nr}.txt")
     today = datetime.now().strftime("%Y-%m-%d")
     os.makedirs(f"{ROUTE_DATA_DIR}/{today}", exist_ok=True)
@@ -78,19 +79,14 @@ def fetch_interruptions_data():
 
 
 def fetch_daily_data():
-    lock_file_instance = lock_file(LOCK_FILE)
-    if lock_file_instance:
         try:
             bus_time_data = fetch_bus_times_data()
             fetch_stops_data()
             fetch_interruptions_data()
             get_routes_data(bus_time_data)
+        except Exception as e:
+            print(e + str(datetime.now()))
         finally:
-            unlock_file(lock_file_instance)
             notify_discord()
-    else:
-        time.sleep(10)
-        fetch_daily_data()
-        print("Failed to write, bc locked")
 
 fetch_daily_data()
