@@ -7,6 +7,8 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 let busData = [];
 let currentIndex = 0; // Keep track of the current index
 let playbackInterval; // To store the playback interval
+let liveDataInterval; // To store the live data interval
+let isLiveData = false; // Flag to check if live data is on
 
 // Fetch the combined bus data
 fetch("combined_bus_data.json")
@@ -50,9 +52,7 @@ function preparePlaybackData(data) {
 // Start the playback
 function startPlayback() {
   // Clear any existing intervals
-  if (playbackInterval) {
-    clearInterval(playbackInterval);
-  }
+  clearIntervals();
 
   // Set an interval to update the map every second
   playbackInterval = setInterval(() => {
@@ -104,6 +104,7 @@ function clearMarkers() {
     }
   });
 }
+
 // Clear existing Polylines from the map
 function clearPolylines() {
   map.eachLayer((layer) => {
@@ -119,11 +120,11 @@ document.getElementById("pause").onclick = pausePlayback;
 document.getElementById("reset").onclick = resetPlayback;
 
 function pausePlayback() {
-  clearInterval(playbackInterval);
+  clearIntervals();
 }
 
 function resetPlayback() {
-  clearInterval(playbackInterval);
+  clearIntervals();
   currentIndex = 0; // Reset index
   clearMarkers(); // Clear markers from the map
   document.getElementById("current-time").textContent = ""; // Clear the displayed time
@@ -177,10 +178,7 @@ function fetchAndDisplayRoute(type, lineNumber, marker) {
   fetch(`routes_folder/${routeFileName}`)
     .then((response) => response.text())
     .then((routeData) => {
-      // Assuming the route data has the encoded polyline after each a-b, b-a block
       const route = routeData.split("\n")[1]; // Simplified: using second line
-
-      // Decode the route
       const routePoints = decodePolyline(route);
 
       // Draw the route on the map
@@ -190,7 +188,6 @@ function fetchAndDisplayRoute(type, lineNumber, marker) {
         opacity: 0.7,
       }).addTo(map);
 
-      // Optionally, bind popup to show route details
       marker.bindPopup(`Route: ${vehicleType} ${lineNumber}`).openPopup();
     })
     .catch((error) => {
@@ -203,7 +200,67 @@ function fetchAndDisplayRoute(type, lineNumber, marker) {
 function onMarkerClick(e, type, lineNumber) {
   clearPolylines();
   const marker = e.target;
-
-  // Fetch and display the route for this bus/tram/trolley line
   fetchAndDisplayRoute(type, lineNumber, marker);
+}
+
+// Live data fetching function
+function fetchLiveData() {
+  fetch("https://transport.tallinn.ee/gps.txt")
+    .then((response) => response.text()) // Getting the raw text data
+    .then((data) => {
+      const rows = data.split("\n").filter((row) => row.trim() !== "");
+      const livePositions = rows.map((row) => {
+        const parts = row.split(",");
+        const type = parseInt(parts[0]); // 1 is tram, 2 is bus, 3 is trolley
+        const lat = parseFloat(parts[2]) / 1000000;
+        const lng = parseFloat(parts[3]) / 1000000;
+        const line = parts[8];
+        return { lat, lng, type, line };
+      });
+
+      clearMarkers(); // Remove old markers
+
+      livePositions.forEach(({ lat, lng, type, line }) => {
+        let color;
+        if (type === 1) color = "green"; // Trams
+        else if (type === 2) color = "blue"; // Buses
+        else if (type === 3) color = "orange"; // Trolleys
+
+        const marker = L.circleMarker([lat, lng], {
+          radius: 5,
+          color: color,
+          fillOpacity: 0.8,
+        }).addTo(map);
+
+        marker.on("click", (e) => onMarkerClick(e, type, line));
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching live data:", error);
+    });
+}
+
+// Add the event listener to the button for toggling live data
+document.getElementById("liveDataButton").addEventListener("click", () => {
+  toggleLiveData();
+});
+
+function toggleLiveData() {
+  if (isLiveData) {
+    // If live data is already on, stop it and return to historical data
+    clearIntervals();
+    startPlayback();
+    isLiveData = false;
+  } else {
+    // If live data is off, stop playback and start fetching live data every 5 seconds
+    clearIntervals();
+    liveDataInterval = setInterval(fetchLiveData, 5000); // Fetch live data every 5 seconds
+    isLiveData = true;
+  }
+}
+
+// Clear both playback and live data intervals
+function clearIntervals() {
+  clearInterval(playbackInterval);
+  clearInterval(liveDataInterval);
 }
