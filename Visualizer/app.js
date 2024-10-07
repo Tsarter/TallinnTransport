@@ -218,6 +218,7 @@ function fetchLiveData() {
   )
     .then((response) => response.text()) // Getting the raw text data
     .then((data) => {
+      console.log(data);
       const rows = data.split("\n").filter((row) => row.trim() !== "");
       const livePositions = rows.map((row) => {
         const parts = row.split(",");
@@ -225,6 +226,7 @@ function fetchLiveData() {
         const lat = parseFloat(parts[2]) / 1000000;
         const lng = parseFloat(parts[3]) / 1000000;
         const line = parts[8];
+        console.log(lat, lng, type, line);
         return { lat, lng, type, line };
       });
 
