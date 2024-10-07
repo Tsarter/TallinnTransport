@@ -205,7 +205,17 @@ function onMarkerClick(e, type, lineNumber) {
 
 // Live data fetching function
 function fetchLiveData() {
-  fetch("https://transport.tallinn.ee/gps.txt")
+  fetch(
+    "https://cors-anywhere.herokuapp.com/https://transport.tallinn.ee/gps.txt",
+    {
+      method: "GET",
+      headers: {
+        Origin:
+          "https://iaib-tatall-b0af8d86ab343c2cfa5c23092f155420fcecf23e6e55011f736.pages.taltech.ee/", // Or replace with your actual origin
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    }
+  )
     .then((response) => response.text()) // Getting the raw text data
     .then((data) => {
       const rows = data.split("\n").filter((row) => row.trim() !== "");
