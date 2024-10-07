@@ -15,7 +15,7 @@ fetch("combined_bus_data.json")
   .then((response) => response.json())
   .then((data) => {
     busData = preparePlaybackData(data);
-    startPlayback(); // Start the playback after data is prepared
+    //startPlayback(); // Start the playback after data is prepared
   })
   .catch((error) => {
     console.error("Error loading bus data:", error);
@@ -61,6 +61,7 @@ function startPlayback() {
 
       // Clear existing markers from the previous time step
       clearMarkers();
+      console.log(positions);
       // Initialize markers and bind click event
       positions.forEach(({ lat, lng, type, line }) => {
         let color;
@@ -210,35 +211,31 @@ function fetchLiveData() {
     {
       method: "GET",
       headers: {
-        Origin:
-          "https://iaib-tatall-b0af8d86ab343c2cfa5c23092f155420fcecf23e6e55011f736.pages.taltech.ee/", // Or replace with your actual origin
         "X-Requested-With": "XMLHttpRequest",
       },
     }
   )
     .then((response) => response.text()) // Getting the raw text data
     .then((data) => {
-      console.log(data);
       const rows = data.split("\n").filter((row) => row.trim() !== "");
       const livePositions = rows.map((row) => {
         const parts = row.split(",");
         const type = parseInt(parts[0]); // 1 is tram, 2 is bus, 3 is trolley
+        const line = parts[1];
         const lat = parseFloat(parts[2]) / 1000000;
         const lng = parseFloat(parts[3]) / 1000000;
-        const line = parts[8];
-        console.log(lat, lng, type, line);
+        console.log(parts);
         return { lat, lng, type, line };
       });
-
+      console.log(livePositions);
       clearMarkers(); // Remove old markers
-
       livePositions.forEach(({ lat, lng, type, line }) => {
         let color;
         if (type === 1) color = "green"; // Trams
         else if (type === 2) color = "blue"; // Buses
         else if (type === 3) color = "orange"; // Trolleys
 
-        const marker = L.circleMarker([lat, lng], {
+        const marker = L.circleMarker([lng, lat], {
           radius: 5,
           color: color,
           fillOpacity: 0.8,
@@ -266,7 +263,8 @@ function toggleLiveData() {
   } else {
     // If live data is off, stop playback and start fetching live data every 5 seconds
     clearIntervals();
-    liveDataInterval = setInterval(fetchLiveData, 5000); // Fetch live data every 5 seconds
+    fetchLiveData();
+    liveDataInterval = setInterval(fetchLiveData, 15000); // Fetch live data every 5 seconds
     isLiveData = true;
   }
 }
