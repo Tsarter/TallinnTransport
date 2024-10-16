@@ -7,3 +7,7 @@ A day has up to 2880 files about realtime data. To make it easier to handle, the
 ## Visualizer
 
 This takes the historical data and shows it on a interactive web map. Its using public leaflet library as basemap.
+
+## Speeds calculator
+
+Calculates the speed of a route
