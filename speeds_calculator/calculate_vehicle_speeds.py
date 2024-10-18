@@ -95,8 +95,12 @@ def calculate_speeds(gps_data):
                     "start": vehicle_coords,
                     "previous_coords": vehicle_coords,
                     "distances": [],
+                    "coordinates": [],
+                    "time": [],
                 }
-
+            # Add coordinates for debuging
+            speeds[vehicle_id]["coordinates"].append(vehicle_coords)
+            speeds[vehicle_id]["time"].append(vehicle_data[0])
             # Calculate distance between previous and current point
             previous_coords = speeds[vehicle_id]["previous_coords"]
             distance = haversine(previous_coords, vehicle_coords)
@@ -119,6 +123,20 @@ gps_data = load_gps_data("iaib/example_data/2024-10-04/realtime_data/2024-10-04"
 # Calculate the speeds
 speeds = calculate_speeds(gps_data)
 
+# Get data for visulazing (debuging)
+line_busId = "12_3495"
+with open(f"bus_movement_{line_busId}.json", "w") as out_file:
+    json.dump(
+        {
+            "coordinates": speeds[line_busId]["coordinates"],
+            "distances": speeds[line_busId]["distances"],
+            "times": speeds[line_busId]["time"],
+        },
+        out_file,
+        indent=2,
+        default=str,
+    )
+
 # Output the total distance traveled for each vehicle
 total_average_speeds = {}
 
@@ -135,8 +153,6 @@ for vehicle_id, data in speeds.items():
         or int(line.replace("A", "").replace("B", "")) > 100
     ):
         continue
-    if line == "17":
-        print("17")
     if line not in total_average_speeds:
         total_average_speeds[line] = {
             "total_distance": total_distance,
@@ -144,10 +160,6 @@ for vehicle_id, data in speeds.items():
         }
     total_average_speeds[line]["total_distance"] += total_distance
     total_average_speeds[line]["total_time"] += total_time
-
-    """ print(
-        f"Vehicle {vehicle_id} traveled {int(total_distance / 1000)}km at an average speed of {average_speed:.2f} km/h"
-    ) """
 
 sorted_average_speeds = sorted(
     [

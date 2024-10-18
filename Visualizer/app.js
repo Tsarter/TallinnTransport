@@ -85,7 +85,9 @@ function startPlayback() {
       // Update the current timestamp display
       document.getElementById(
         "current-time"
-      ).textContent = `Current Time: ${new Date(timestamp).toLocaleString()}`;
+      ).textContent = `Current Time: ${new Date(timestamp).toLocaleTimeString(
+        "en-GB"
+      )}`;
 
       // Increment the index for the next time step
       currentIndex++;
@@ -204,73 +206,7 @@ function onMarkerClick(e, type, lineNumber) {
   fetchAndDisplayRoute(type, lineNumber, marker);
 }
 
-// Live data fetching function
-function fetchLiveData() {
-  fetch(
-    "https://cors-anywhere.herokuapp.com/https://transport.tallinn.ee/gps.txt",
-    {
-      method: "GET",
-      headers: {
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    }
-  )
-    .then((response) => response.text()) // Getting the raw text data
-    .then((data) => {
-      const rows = data.split("\n").filter((row) => row.trim() !== "");
-      const livePositions = rows.map((row) => {
-        const parts = row.split(",");
-        const type = parseInt(parts[0]); // 1 is tram, 2 is bus, 3 is trolley
-        const line = parts[1];
-        const lat = parseFloat(parts[2]) / 1000000;
-        const lng = parseFloat(parts[3]) / 1000000;
-        console.log(parts);
-        return { lat, lng, type, line };
-      });
-      console.log(livePositions);
-      clearMarkers(); // Remove old markers
-      livePositions.forEach(({ lat, lng, type, line }) => {
-        let color;
-        if (type === 1) color = "green"; // Trams
-        else if (type === 2) color = "blue"; // Buses
-        else if (type === 3) color = "orange"; // Trolleys
-
-        const marker = L.circleMarker([lng, lat], {
-          radius: 5,
-          color: color,
-          fillOpacity: 0.8,
-        }).addTo(map);
-
-        marker.on("click", (e) => onMarkerClick(e, type, line));
-      });
-    })
-    .catch((error) => {
-      console.error("Error fetching live data:", error);
-    });
-}
-
-// Add the event listener to the button for toggling live data
-document.getElementById("liveDataButton").addEventListener("click", () => {
-  toggleLiveData();
-});
-
-function toggleLiveData() {
-  if (isLiveData) {
-    // If live data is already on, stop it and return to historical data
-    clearIntervals();
-    startPlayback();
-    isLiveData = false;
-  } else {
-    // If live data is off, stop playback and start fetching live data every 5 seconds
-    clearIntervals();
-    fetchLiveData();
-    liveDataInterval = setInterval(fetchLiveData, 15000); // Fetch live data every 5 seconds
-    isLiveData = true;
-  }
-}
-
 // Clear both playback and live data intervals
 function clearIntervals() {
   clearInterval(playbackInterval);
-  clearInterval(liveDataInterval);
 }
