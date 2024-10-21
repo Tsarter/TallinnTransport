@@ -1,6 +1,7 @@
 # fetch_daily_data.py
 
 import requests
+import json
 import os
 from datetime import datetime
 import time
@@ -11,12 +12,10 @@ from config import (
     BUS_TIMES_DATA_DIR,
     STOPS_URL,
     STOPS_DATA_DIR,
-    INTERRUPTIONS_URL,
-    INTERRUPTIONS_DATA_DIR,
-    LOCK_FILE
+    ANNOUNCEMENTS_URL,
+    ANNOUNCEMENTS_DATA_DIR
 )
 from notify_discord import notify_discord
-from lock import lock_file, unlock_file
 
 def get_routes_data(data):
     rows = data.split("\n")
@@ -67,22 +66,19 @@ def fetch_stops_data():
         file.write(response.text)
     return response.text
 
-
-def fetch_interruptions_data():
-    response = requests.get(INTERRUPTIONS_URL)
+def fetch_announcements_data():
+    response = requests.get(ANNOUNCEMENTS_URL)
     today = datetime.now().strftime("%Y-%m-%d")
-    os.makedirs(f"{INTERRUPTIONS_DATA_DIR}/{today}", exist_ok=True)
-    with open(
-        f"{INTERRUPTIONS_DATA_DIR}/{today}/interruptions.txt", "w", encoding="utf-8"
-    ) as file:
-        file.write(response.text)
-
+    os.makedirs(f"{ANNOUNCEMENTS_DATA_DIR}/{today}", exist_ok=True)
+    with open(f"{ANNOUNCEMENTS_DATA_DIR}/{today}/announcement.json", "w", encoding="utf-8") as file:
+        json.dump(response.json(), file)
+    return response.text
 
 def fetch_daily_data():
         try:
+            fetch_announcements_data()
             bus_time_data = fetch_bus_times_data()
             fetch_stops_data()
-            fetch_interruptions_data()
             get_routes_data(bus_time_data)
         except Exception as e:
             print(e + str(datetime.now()))

@@ -9,3 +9,7 @@ Added .lower() to routes. 6.10.2024
 https://transport.tallinn.ee/data/tallinna-linn_bus_41B.txt This gave error before
 https://transport.tallinn.ee/data/tallinna-linn_bus_41b.txt This works
 This means all b lines are missing routes info.
+
+Added announcments 22:10:2024 at 23:45
+
+Interruptions are now scraped every 5min and in .json format 22:10:2024
