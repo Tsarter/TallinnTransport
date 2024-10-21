@@ -1,3 +1,10 @@
+if (window.location.hostname === "127.0.0.1") {
+  document.querySelector("base").setAttribute("href", "/iaib/Visualize/");
+} else {
+  console.log(window.location.hostname);
+  document.querySelector("base").setAttribute("href", "/");
+}
+
 const map = L.map("map").setView([59.46194, 24.66775], 13);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
