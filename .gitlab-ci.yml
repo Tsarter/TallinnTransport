@@ -6,7 +6,8 @@ pages:
     # You can replace this with your actual build commands if necessary
     - echo "hello"
     - mkdir public
-    - cp -r Visualizer/* public/  # Copy the contents of Visualizer to the public folder
+    - cp -r Visualizer/. public/  # Copy everything from Visualizer to the public folder
+    - ls -R public/   # Copy the contents of Visualizer to the public folder
   artifacts:
     paths:
       - public  # GitLab Pages expects your static site files to be in the public/ directory
