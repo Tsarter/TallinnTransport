@@ -21,8 +21,8 @@ STOPS_URL = "https://transport.tallinn.ee/data/stops.xml"
 STOPS_DATA_DIR = DATA_DIR + "/stops_data"
 
 # Interruptions Data
-INTERRUPTIONS_URL = "https://transport.tallinn.ee/tabloconfig2021.php"
+INTERRUPTIONS_URL = "https://transport.tallinn.ee/interruptions.json"
 INTERRUPTIONS_DATA_DIR = DATA_DIR + "/interruptions_data"
 
-# lock, Everythin got deleted, so I am trying to avoid it now
+# lock, When i thought everything got deleted. I didnt in the end
 LOCK_FILE = "/home/tanel/Documents/public_transport_project/TransportInfoScraper/folder_saving/tmp/harddrive.lock"

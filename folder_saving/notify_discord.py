@@ -2,6 +2,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 from lock import lock_file, unlock_file
+import time
 
 from config import (
     DATA_DIR,
@@ -59,9 +60,4 @@ BUS TIMES DATA size: {BUS_TIMES_DATA_size:.2f} MB \n
 
 
 def notify_discord():
-    lock_file_instance = lock_file(LOCK_FILE)
-    if lock_file_instance:
-        try:
-            notify_discord()
-        finally:
-            unlock_file(lock_file_instance)
+    main()
