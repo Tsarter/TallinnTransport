@@ -24,5 +24,9 @@ STOPS_DATA_DIR = DATA_DIR + "/stops_data"
 INTERRUPTIONS_URL = "https://transport.tallinn.ee/interruptions.json"
 INTERRUPTIONS_DATA_DIR = DATA_DIR + "/interruptions_data"
 
+# Announcements Data
+ANNOUNCEMENTS_URL = "https://transport.tallinn.ee/announcements.json"
+ANNOUNCEMENTS_DATA_DIR = DATA_DIR + "/announcements_data"
+
 # lock, When i thought everything got deleted. I didnt in the end
 LOCK_FILE = "/home/tanel/Documents/public_transport_project/TransportInfoScraper/folder_saving/tmp/harddrive.lock"

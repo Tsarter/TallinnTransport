@@ -64,7 +64,7 @@ def main():
         fetch_realtime_data()
 
         # Fetch interruptions every 300 seconds (5 minutes)
-        if start_time - last_interruptions_time >= 3000:
+        if start_time - last_interruptions_time >= 300:
             check_and_save_interruptions()
             last_interruptions_time = start_time
         
