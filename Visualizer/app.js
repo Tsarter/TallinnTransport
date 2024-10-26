@@ -1,4 +1,6 @@
 const map = L.map("map").setView([59.46194, 24.66775], 13);
+// Groups
+const routeMarkersGroup = L.layerGroup().addTo(map);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors",
@@ -190,6 +192,16 @@ function fetchAndDisplayRoute(type, lineNumber, marker) {
         weight: 5,
         opacity: 0.7,
       }).addTo(map);
+      // Add markers at each route point
+      routePoints.forEach((point) => {
+        const marker = L.circleMarker(point, {
+          radius: 4,
+          color: "red",
+          fillColor: "red",
+          fillOpacity: 0.8,
+        });
+        routeMarkersGroup.addLayer(marker);
+      });
 
       marker.bindPopup(`Route: ${vehicleType} ${lineNumber}`).openPopup();
     })
@@ -202,6 +214,7 @@ function fetchAndDisplayRoute(type, lineNumber, marker) {
 // Marker click event handler
 function onMarkerClick(e, type, lineNumber) {
   clearPolylines();
+  routeMarkersGroup.clearLayers();
   const marker = e.target;
   fetchAndDisplayRoute(type, lineNumber, marker);
 }
