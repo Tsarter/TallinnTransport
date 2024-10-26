@@ -145,7 +145,17 @@ def distance_to_line_segment(bus, A, B):
 
 
 # FILE SYSTEM functions
-def load_route_data(directory):
+def load_route_data(file):
+    route_decoded = []
+    with open(file) as file:
+        route = file.read().strip()
+        route_split = route.split("\n")
+        route_decoded = decode_polyline(route_split[1])
+
+    return route_decoded
+
+
+def load_routes_data(directory):
     routes_decoded = {}
     for file_name in sorted(os.listdir(directory)):
         if file_name.endswith("routes.txt"):
