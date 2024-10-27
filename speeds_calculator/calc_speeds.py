@@ -35,7 +35,6 @@ def calculate_speeds(gps_data):
             # Track speed data for each vehicle
             if vehicle_id not in speeds:
                 speeds[vehicle_id] = {
-                    "start": vehicle_coords,
                     "previous_coords": vehicle_coords,
                     "distances": [],
                     "coordinates": [],
@@ -45,7 +44,9 @@ def calculate_speeds(gps_data):
             speeds[vehicle_id]["coordinates"].append(vehicle_coords)
             speeds[vehicle_id]["time"].append(time)
             debug = speeds[vehicle_id]
-            # Calculate distance between previous and current point
+            if vehicle_id == "bus_13_1442" and str(time) == "2024-10-04 09:27:04":
+                print("hey")
+            # Calculate distance between previous and current point 59.40839 24.74844 59.405 24.73856
             previous_coords = speeds[vehicle_id]["previous_coords"]
             distance = haversine(previous_coords, vehicle_coords)
             speeds[vehicle_id]["distances"].append(distance)
@@ -103,20 +104,20 @@ def print_avg_speeds(speeds):
         if len(on_line_data) > 1000:
             # global html_options
             # html_options.append(f'<option value="{vehicle_id}">{vehicle_id}</option> ')
-            """with open(f"movements/bus_movement_{vehicle_id}.json", "w") as out_file:
-            json.dump(
-                {
-                    "coordinates": list(
-                        map(lambda x: [x[0][1], x[0][0]], on_line_data)
-                    ),
-                    "times": list(map(lambda x: x[1], on_line_data)),
-                    "distances": list(map(lambda x: x[2], on_line_data)),
-                },
-                out_file,
-                indent=2,
-                default=str,
-            )
-            """
+            with open(f"movements/bus_movement_{vehicle_id}.json", "w") as out_file:
+                json.dump(
+                    {
+                        "coordinates": list(
+                            map(lambda x: [x[0][1], x[0][0]], on_line_data)
+                        ),
+                        "times": list(map(lambda x: x[1], on_line_data)),
+                        "distances": list(map(lambda x: x[2], on_line_data)),
+                    },
+                    out_file,
+                    indent=2,
+                    default=str,
+                )
+
         total_distance = sum([x[2] for x in on_line_data])  # in meters
         total_time = (data["time"][-1] - data["time"][0]).total_seconds()
         average_speed = (

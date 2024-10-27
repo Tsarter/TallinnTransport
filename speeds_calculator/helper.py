@@ -43,9 +43,12 @@ def decode_polyline(encoded):
 
 
 def haversine(coord1, coord2):
+    # lat should be something 59N and lon should be 24E for Tallinn
+    if coord1[1] < 30 or coord2[1] < 30:
+        print("lon and lat are wrong way for Tallinn")
     R = 6371000  # Earth radius in meters
-    lat1, lon1 = radians(coord1[1]), radians(coord1[0])
-    lat2, lon2 = radians(coord2[1]), radians(coord2[0])
+    lat1, lon1 = radians(coord1[0]), radians(coord1[1])
+    lat2, lon2 = radians(coord2[0]), radians(coord2[1])
 
     dlat = lat2 - lat1
     dlon = lon2 - lon1

@@ -207,7 +207,7 @@
                     // Function to update the bus position based on slider value
                     function updateBusPosition(index) {
                         busMarker.setLatLng([coordinates[index][1], coordinates[index][0]]);
-                        busMarker.bindPopup(vehicle_id + " speed: " + Math.round(distances[index] / 30 * 3.6) + " km/h").openPopup();
+                        busMarker.bindPopup(vehicle_id + " speed: " + Math.round(distances[index] / 30 * 3.6) + " km/h,dist: " +  Math.round(distances[index])+ " m").openPopup();
                     }
 
                     // Event listener for the slider to update bus position
