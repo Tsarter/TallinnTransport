@@ -12,7 +12,7 @@ def fetch_realtime_data():
     timestamp = datetime.now().strftime("%H-%M-%S")
     folder_path = f'{REALTIME_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
     os.makedirs(folder_path, exist_ok=True)
-    with open(f"{folder_path}/{timestamp}.json", "w") as file:
+    with open(f"{folder_path}/{timestamp}.json", "w",  encoding="utf-8") as file:
         file.write(response.text)
 
 # Function to fetch the current interruptions data
@@ -48,7 +48,7 @@ def check_and_save_interruptions():
         timestamp = datetime.now().strftime("%H-%M-%S")
         folder_path = f'{INTERRUPTIONS_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
         os.makedirs(folder_path, exist_ok=True)
-        with open(f"{folder_path}/{timestamp}.json", "w") as file:
+        with open(f"{folder_path}/{timestamp}.json", "w",  encoding="utf-8") as file:
             json.dump(new_data, file)
         if new_is_empty:
             print(f"Interruption ended at {timestamp}")
