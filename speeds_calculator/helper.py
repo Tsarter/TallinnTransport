@@ -176,7 +176,10 @@ def load_gps_data(directory):
     for file_name in sorted(os.listdir(directory)):
         if file_name.endswith(".json"):
             with open(os.path.join(directory, file_name)) as f:
-                data = json.load(f)
-                timestamp = datetime.fromisoformat(data["timestamp"][:-6])
-                gps_data.append((timestamp, data["features"]))
+                try:
+                    data = json.load(f)
+                    timestamp = datetime.fromisoformat(data["timestamp"][:-6])
+                    gps_data.append((timestamp, data["features"]))
+                except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+                    print(f"Error processing file {file_name}: {e}")
     return gps_data
