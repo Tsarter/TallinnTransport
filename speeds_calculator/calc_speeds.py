@@ -79,8 +79,8 @@ def get_data_on_line(vehicle_id, data):
 
         # Went on the line from the end or start
         elif not on_line and (
-            endpoint_range * 3 > dist_from_start > endpoint_range
-            or endpoint_range * 3 > dist_from_end > endpoint_range
+            endpoint_range * 2 > dist_from_start > endpoint_range
+            or endpoint_range * 2 > dist_from_end > endpoint_range
         ):
             on_line = True
 
