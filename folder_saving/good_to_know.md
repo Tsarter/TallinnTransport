@@ -13,3 +13,6 @@ This means all b lines are missing routes info.
 Added announcments 22:10:2024 at 23:45
 
 Interruptions are now scraped every 5min and in .json format 22:10:2024
+
+Changed time when daily scraper runs. 31.10.2024 at 23:50
+Previosuly at 01:00, now 04:00.
