@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import datetime
+import gzip
 
 # Base folder containing the date folders
 base_folder = "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data/realtime_data/"
@@ -19,7 +20,7 @@ for date in os.listdir(base_folder):
             os.makedirs(out_folder)
 
         # Define the path for the combined output file
-        combined_file_path = os.path.join(out_folder, "combined_bus_data.json")
+        combined_file_path = os.path.join(out_folder, "combined_bus_data.gz")
         
         # Check if the combined output file already exists
         if os.path.exists(combined_file_path):
@@ -33,7 +34,7 @@ for date in os.listdir(base_folder):
         # Loop through all JSON files in the current date folder
         for filename in sorted(os.listdir(folder)):
             i += 1
-            if i % 100 == 0:
+            if i % 3000 == 0:
                 print(f"{i} files processed from {date}.")
             if filename.endswith(".json"):
                 filepath = os.path.join(folder, filename)
@@ -59,8 +60,9 @@ for date in os.listdir(base_folder):
 
         # Save to a new file in the output directory for the current date
         try:
-            with open(combined_file_path, "w") as out_file:
-                json.dump(output, out_file, indent=2)
-            print(f"Data combined and saved to {combined_file_path} for date {date}")
+            # GZIP COMPRESSES REAL GOOD. Like 150mb -> to 15mb
+            with gzip.open(f"{combined_file_path}", "wt", encoding="utf-8") as out_file:
+                json.dump(output, out_file, separators=(',', ':'))
+            # print(f"Data zipped and saved")
         except Exception as e:
             print(f"Error saving combined data for date {date}: {e}")

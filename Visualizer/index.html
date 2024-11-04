@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Real-Time Bus Tracker</title>
+    <title>Real-Time Bus Tracker2</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css" />
     <!-- <base href="/"> -->
@@ -14,27 +14,17 @@
         <button id="pause">Pause</button>
         <button id="reset">Reset</button>
         <!-- <button id="liveDataButton">Switch to Live Data</button> -->
+        <input type="date" id="datePicker" min="2024-07-06" max="2024-11-04" style="margin-top: 10px; margin-left: 5px;">
+        
          <a id="oneLineLink" href="/Visualize_one_line_(debug)/Bus_move_viz.html">One line</a>
         <div id="current-time" style="font-size: 20px; margin-top: 10px;"></div>        
     </div>
     
 
-    <!-- <script>
-        // TODO: this needs better approach but yeh
-        if (window.location.hostname === "127.0.0.1") {
-            console.log(window.location.hostname);
-        // For local development
-        document.querySelector("base").setAttribute("href", "/iaib/Visualizer/");
-        oneLineLink.setAttribute("href", "/iaib/Visualizer/Visualize_one_line_(debug)/Bus_move_viz.html");
-        } else {
-        console.log(window.location.hostname);
-        // For Gitlab Pages
-        document.querySelector("base").setAttribute("href", "/");
-        oneLineLink.setAttribute("href", "/Visualize_one_line_(debug)/Bus_move_viz.html")
-        }
-    </script> -->
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- Pako for zip files -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.0.4/dist/pako.min.js"></script>
 
     <!-- Your App JS -->
     <script src="app.js"></script>
