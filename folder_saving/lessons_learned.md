@@ -20,3 +20,9 @@ Buy proper power supply. Havent done it.
 ## House lost power
 Realtime scraper not working. Harddrive not mounted
 Lost power on 4.09.2024. Multiple times. 
+
+## Directory change
+Found that scrarper hadnt worked for a whole week, bc i had changed the folder structure and the file wasnt found anymore
+Fixed by changing dir in sudo nano /etc/systemd/system/transport_realtime.service
+/home/tanel/Documents/public_transport_project/TransportInfoScraper/folder_saving/fetch_realtime_data.py
+-> /home/tanel/Documents/public_transport_project/Transport/folder_saving/fetch_realtime_data.py 
