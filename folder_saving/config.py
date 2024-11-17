@@ -1,11 +1,15 @@
 # config.py
 
-DATA_DIR = "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data"
+DATA_DIR = (
+    "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data"
+)
 
-DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/1258765586167758870/WgUJ-wPgZMFXnspyBDNdZQBGg7GVeBwjI0EsBM_Ofe8tJPVvj3qEzOq4gbCeuBrDRw6I"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1258765586167758870/WgUJ-wPgZMFXnspyBDNdZQBGg7GVeBwjI0EsBM_Ofe8tJPVvj3qEzOq4gbCeuBrDRw6I"
 
 # Realtime Location Data
+# https://gis.ee/tallinn/gps.php | https://transport.tallinn.ee/readfile.php?name=gps.txt | https://gis.ee/tallinn/gps.txt
 REALTIME_URL = "https://gis.ee/tallinn/gps.php"
+REALTIME_URL_TXT = "https://transport.tallinn.ee/readfile.php?name=gps.txt"
 REALTIME_DATA_DIR = DATA_DIR + "/realtime_data"
 
 # Route Coordinates Data
@@ -27,6 +31,3 @@ INTERRUPTIONS_DATA_DIR = DATA_DIR + "/interruptions_data"
 # Announcements Data
 ANNOUNCEMENTS_URL = "https://transport.tallinn.ee/announcements.json"
 ANNOUNCEMENTS_DATA_DIR = DATA_DIR + "/announcements_data"
-
-# lock, When i thought everything got deleted. I didnt in the end
-LOCK_FILE = "/home/tanel/Documents/public_transport_project/TransportInfoScraper/folder_saving/tmp/harddrive.lock"
