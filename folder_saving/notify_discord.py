@@ -1,7 +1,6 @@
 import requests
 import os
 from datetime import datetime, timedelta
-from lock import lock_file, unlock_file
 import time
 
 from config import (
@@ -12,7 +11,6 @@ from config import (
     INTERRUPTIONS_DATA_DIR,
     DISCORD_WEBHOOK_URL,
     REALTIME_DATA_DIR,
-    LOCK_FILE
 )
 
 
