@@ -1,7 +1,6 @@
 import requests
 import os
 from datetime import datetime, timedelta
-import time
 
 from config import (
     DATA_DIR,
