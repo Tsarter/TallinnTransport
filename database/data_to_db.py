@@ -1,19 +1,22 @@
 import os
 import sqlite3
+import json
 
 # SQLite database file path
 DB_PATH = "/home/tanel/Documents/public_transport_project/HardDrive/data.db"
 
-# Directory containing the text files
-DATA_DIR = "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data/realtime_data/2024-12-28"  # Change this to your folder path
+# Directory containing subfolders with name as year-month-day, each folder contains data for the day
+DATA_DIR = "D:/Transport_baka/Backup_27_10_2024/transport_data/realtime_data"
 
-def save_to_database(data, timestamp):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL;")
+
+def convert_txt(data, timestamp):
     rows = data.split("\n")
+    date = timestamp.split("_")[0]
+    time = timestamp.split("_")[1]
 
-    # '3,2,24729150,59441910,,115,96,Z,29,Suur-Paala'
+    # Prepare a list to store all data for batch insert
+    insert_data = []
+
     for row in rows:
         fields = row.split(",")
         if len(fields) != 10:
@@ -31,16 +34,88 @@ def save_to_database(data, timestamp):
         unknown2 = fields[8]
         destination = fields[9]
 
-        composite_id = f"{timestamp}{vehicle_id}{line}"
+        # Composite ID: timestamp-vehicle_id-line (ensure it's unique)
+        composite_id = f"{timestamp}-{vehicle_id}-{line}"
 
-        # Insert into the database
-        cursor.execute(
+        # Append data to the list for batch insertion
+        insert_data.append(
+            (
+                composite_id,
+                date,
+                time,
+                vehicle_type,
+                line,
+                latitude,
+                longitude,
+                direction,
+                unknown1,
+                unknown2,
+                destination,
+                vehicle_id,
+            )
+        )
+    return insert_data
+
+
+def convert_json(data, timestamp):
+
+    insert_data = []
+    date = timestamp.split("_")[0]
+    time = timestamp.split("_")[1]
+
+    for row in data.get("features", []):
+        properties = row.get("properties", {})
+        coordinates = row.get("geometry", {}).get("coordinates", [])
+
+        vehicle_type = properties.get("type", "")
+        line = properties.get("line", "")
+        longitude = coordinates[0]
+        latitude = coordinates[1]
+        direction = properties.get("direction", "")
+        vehicle_id = properties.get("id", "")
+
+        composite_id = f"{timestamp}_{vehicle_id}_{line}"
+
+        insert_data.append(
+            (
+                composite_id,
+                date,
+                time,
+                vehicle_type,
+                line,
+                latitude,
+                longitude,
+                direction,
+                vehicle_id,
+            )
+        )
+    return insert_data
+
+
+def save_to_database(data, timestamp):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL;")
+
+    if type(data) == str:
+        insert_data = convert_txt(data, timestamp)
+        cursor.executemany(
             """
-            INSERT INTO features (
-                id, timestamp, type, line, latitude, longitude, direction, unknown1, unknown2, destination, vehicle_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO features (
+                id, date,time, type, line, latitude, longitude, direction, unknown1, unknown2, destination, vehicle_id
+            ) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (composite_id, timestamp, vehicle_type, line, latitude, longitude, direction, unknown1, unknown2, destination, vehicle_id),
+            insert_data,
+        )
+    if type(data) == dict:
+        insert_data = convert_json(data, timestamp)
+        cursor.executemany(
+            """
+            INSERT OR IGNORE INTO realtimejson (
+                id, date,time, type, line, latitude, longitude, direction, vehicle_id
+            ) VALUES (?, ?,?, ?, ?, ?, ?, ?, ?)
+            """,
+            insert_data,
         )
 
     conn.commit()
@@ -48,20 +123,28 @@ def save_to_database(data, timestamp):
 
 
 def process_files_in_directory(directory):
-    # Loop through all files in the directory
-    for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
+    # Loop through all files and subdirectories in the directory
+    for dirpath, dirnames, filenames in os.walk(directory):
+        for filename in filenames:
+            # Check if the file is a .txt file
+            if filename.endswith(".txt") or filename.endswith(".json"):
+                file_path = os.path.join(dirpath, filename)
 
-        # Check if the file is a .txt file
-        if os.path.isfile(file_path) and filename.endswith('.txt'):
-            # Extract timestamp from the filename or from file content (if needed)
-            timestamp = filename.split('.')[0]  # Assuming timestamp is in the filename
-            
-            # Open and read the .txt file
-            with open(file_path, 'r', encoding="utf-8") as file:
-                data = file.read()
-                save_to_database(data, timestamp)
-                print(f"Processed {filename}")
+                head_tail = os.path.split(dirpath)
+                timestamp = head_tail[1] + "_" + filename.split(".")[0]
+
+                try:
+                    # Open and read the .txt file
+                    with open(file_path, "r", encoding="utf-8") as file:
+                        data = file.read()
+                        if filename.endswith(".json"):
+                            data = json.loads(data)
+                        save_to_database(data, timestamp)
+                        print(f"Processed {file_path}")
+                except Exception as e:
+
+                    print(f"Error processing {file_path}: {e}")
+
 
 if __name__ == "__main__":
     process_files_in_directory(DATA_DIR)
