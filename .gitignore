@@ -2,3 +2,4 @@ example_data
 proxy
 node_modules
 *.pyc
+*.csv
