@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postgres Data on Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
+        <label for="hourSlider">Hour of Day:</label>
+        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="12">
+        <span id="hourValue">12</span>:00
+
+        <br><br>
+
+        <label for="daySlider">Day of August:</label>
+        <input type="range" id="daySlider" name="daySlider" min="1" max="30" value="15">
+        <span id="dayValue">15</span>
+    </div>
+
+
+
+    <script>
+         const hourSlider = document.getElementById('hourSlider');
+        const hourValue = document.getElementById('hourValue');
+        const daySlider = document.getElementById('daySlider');
+        const dayValue = document.getElementById('dayValue');
+
+        hourSlider.oninput = function() {
+            hourValue.textContent = this.value;
+            loadData();
+        }
+
+        daySlider.oninput = function() {
+            dayValue.textContent = this.value;
+            loadData();
+        }
+        // Initialize the Leaflet map
+        const map = L.map('map').setView([59.437, 24.753], 12); // Centered at Tallinn, Estonia
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Fetch data from server and display on the map
+        async function loadData() {
+            try {
+                const hour = hourSlider.value;
+                const day = daySlider.value;
+                const date = `2024-08-${String(day).padStart(2, '0')}`;
+                console.log("date: ");
+                const response = await fetch(`http://localhost:3000/speedsegments?hour=${hour}&date=${date}&type=1`);
+                console.log("response got");
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                const data = await response.json();
+
+                // Clear existing layers
+                map.eachLayer(layer => {
+                    if (layer instanceof L.GeoJSON) {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                data.forEach(row => {
+                    const { segment, speed_kmh } = row;
+
+                    // Parse GeoJSON directly
+                    const geojson = JSON.parse(segment);
+
+                    if (speed_kmh > 5){
+                        return
+                    }
+
+                    // Determine color based on speed
+                    const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
+
+                    // Add the GeoJSON as a layer
+                    L.geoJSON(geojson, {
+                        style: {
+                            color,
+                            weight: 6
+                        }
+                    }).addTo(map)
+                    .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h`);
+                });
+                console.log("data loaded");
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
