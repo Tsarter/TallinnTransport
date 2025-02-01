@@ -53,53 +53,58 @@
 
         // Fetch data from server and display on the map
         async function loadData() {
+            const startTime = performance.now();
             try {
-                const hour = hourSlider.value;
-                const day = daySlider.value;
-                const date = `2024-08-${String(day).padStart(2, '0')}`;
-                console.log("date: ");
-                const response = await fetch(`http://localhost:3000/speedsegments?hour=${hour}&date=${date}&type=1`);
-                console.log("response got");
+            const hour = hourSlider.value;
+            const day = daySlider.value;
+            const date = `2024-08-${String(day).padStart(2, '0')}`;
+            console.log("date: ");
+            const response = await fetch(`http://localhost:3000/speedsegments?hour=${hour}&date=${date}&type=1`);
+            console.log("response got");
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            const data = await response.json();
+            console.log("data: ", data);
+
+            // Clear existing layers
+            map.eachLayer(layer => {
+                if (layer instanceof L.GeoJSON) {
+                map.removeLayer(layer);
+                }
+            });
+
+            data.forEach(row => {
+                const {line, segment, speed_kmh } = row;
+
+                // Parse GeoJSON directly
+                const geojson = JSON.parse(segment);
+
+                if (speed_kmh > 5){
+                return
                 }
 
-                const data = await response.json();
+                // Determine color based on speed
+                const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
 
-                // Clear existing layers
-                map.eachLayer(layer => {
-                    if (layer instanceof L.GeoJSON) {
-                        map.removeLayer(layer);
-                    }
-                });
-
-                data.forEach(row => {
-                    const { segment, speed_kmh } = row;
-
-                    // Parse GeoJSON directly
-                    const geojson = JSON.parse(segment);
-
-                    if (speed_kmh > 5){
-                        return
-                    }
-
-                    // Determine color based on speed
-                    const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
-
-                    // Add the GeoJSON as a layer
-                    L.geoJSON(geojson, {
-                        style: {
-                            color,
-                            weight: 6
-                        }
-                    }).addTo(map)
-                    .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h`);
-                });
-                console.log("data loaded");
+                // Add the GeoJSON as a layer
+                L.geoJSON(geojson, {
+                style: {
+                    color,
+                    weight: 6
+                }
+                }).addTo(map)
+                .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}`);
+            });
+            console.log("data loaded");
 
             } catch (error) {
-                console.error('Error loading data:', error);
+            console.error('Error loading data:', error);
+            } finally {
+            const endTime = performance.now();
+            console.log(`Data loading took ${(endTime - startTime) / 1000} seconds.`);
             }
         }
 
