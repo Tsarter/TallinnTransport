@@ -1,5 +1,6 @@
 example_data
 proxy
-node_modules
+**/node_modules/
 *.pyc
 *.csv
+env.env
