@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define source and destination directories
-SOURCE_DIR="/home/tanel/Documents/public_transport_project/Transport/Visualizer/"
+SOURCE_DIR="/home/tanel/Documents/public_transport_project/iaib/Visualizer/"
 DEST_DIR="/var/www/web_server/"
 
 # Copy files from source to destination

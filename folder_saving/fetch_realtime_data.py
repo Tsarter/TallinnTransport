@@ -2,6 +2,7 @@
 import json
 import requests
 import os
+import sys
 import sqlite3
 from datetime import datetime
 import time
@@ -13,45 +14,10 @@ from config import (
     INTERRUPTIONS_DATA_DIR,
     REALTIME_URL_TXT,
 )
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-# SQLite database file path
-DB_PATH = "/home/tanel/Documents/public_transport_project/HardDrive/data.db"
-
-def save_to_database(data, timestamp):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    rows =  data.split("\n")
-    for row in rows:
-        fields = row.split(",")
-        if len(fields) != 10:
-            continue
-
-        # Extract fields
-        vehicle_type = fields[0]
-        line = fields[1]
-        longitude = fields[2]
-        latitude = fields[3]
-        empty = fields[4]
-        direction = fields[5]
-        vehicle_id = fields[6]
-        unknown1 = fields[7]
-        unknown2 = fields[8]
-        destination = fields[9]
-
-        composite_id = f"{timestamp}-{vehicle_id}-{line}"
-
-        # Insert into the database
-        cursor.execute(
-            """
-            INSERT INTO features (
-                id, timestamp, type, line, latitude, longitude, direction, unknown1, unknown2, destination, vehicle_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
-            """,
-            (composite_id, timestamp, vehicle_type, line, latitude, longitude, direction, unknown1, unknown2, destination,vehicle_id),
-        )
-
-    conn.commit()
-    conn.close()
+print(os.getcwd())
+from iaib.database.data_to_db import save_to_database
 
 
 def fetch_realtime_data(file_type="json", url=REALTIME_URL):
@@ -62,11 +28,14 @@ def fetch_realtime_data(file_type="json", url=REALTIME_URL):
     with open(f"{folder_path}/{timestamp}.{file_type}", "w", encoding="utf-8") as file:
         file.write(response.text)
     
-    # Save to database if JSON data is fetched
+    # Save to database
     if file_type == "txt":
         data = response.text
-        # save_to_database(data, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
+    if file_type == "json":
+        data = response.json()
+    date = datetime.now().strftime("%Y-%m-%d")
+    time = datetime.now().strftime("%H-%M-%S")
+    save_to_database(data, f"{date}_{time}")
 
 # Function to fetch the current interruptions data
 def fetch_interruptions():
@@ -120,7 +89,7 @@ def main():
         start_time = time.time()
         try:
             # Fetch realtime data every 30 seconds
-            fetch_realtime_data()  # Original
+            # fetch_realtime_data()
             fetch_realtime_data(
                 "txt", REALTIME_URL_TXT
             )  # More data with this url (route destination incl.)

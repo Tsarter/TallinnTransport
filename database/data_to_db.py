@@ -6,7 +6,7 @@ import json
 DB_PATH = "/home/tanel/Documents/public_transport_project/HardDrive/data.db"
 
 # Directory containing subfolders with name as year-month-day, each folder contains data for the day
-DATA_DIR = "D:/Transport_baka/Backup_27_10_2024/transport_data/realtime_data"
+DATA_DIR = "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data/realtime_data/2025-01-02"
 
 
 def convert_txt(data, timestamp):
@@ -98,6 +98,7 @@ def save_to_database(data, timestamp):
     cursor.execute("PRAGMA journal_mode=WAL;")
 
     if type(data) == str:
+
         insert_data = convert_txt(data, timestamp)
         cursor.executemany(
             """
