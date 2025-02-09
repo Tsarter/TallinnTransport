@@ -3,88 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bus Route Visualization</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <title>Postgres Data on Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         #map {
-            width: 100%;
-            height: 90vh;
+            height: 100vh;
         }
     </style>
 </head>
 <body>
-    <h1>Bus Route Visualization</h1>
     <div id="map"></div>
+    <div style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
+        <label for="hourSlider">Hour of Day:</label>
+        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="12">
+        <span id="hourValue">12</span>:00
+
+        <br><br>
+
+        <label for="datePicker">Date:</label>
+        <input type="date" id="datePicker" name="datePicker" value="2024-08-15" min="2024-07-06" max="2024-10-05">
+        <span id="dateValue">2024-08-15</span>
+
+        <br><br>
+
+        <label for="timeWindowSize">Time Window Size (hours):</label>
+        <input type="number" id="timeWindowSize" name="timeWindowSize" min="1" max="24" value="1">
+
+        <br><br>
+
+        <label for="linePicker">not working</label>
+        <input type="text" id="linePicker" name="linePicker" placeholder=" (not working)">
+        <br><br>
+        <button onclick="loadData()">Load Data</button> <p id="status"></p>
+
+    </div>
 
     <script>
-        // Initialize the map
-        const map = L.map('map').setView([59.44386, 24.74724], 14);
+        const hourSlider = document.getElementById('hourSlider');
+        const hourValue = document.getElementById('hourValue');
+        const datePicker = document.getElementById('datePicker');
+        const dateValue = document.getElementById('dateValue');
+        const timeWindowSize = document.getElementById('timeWindowSize');
+        const linePicker = document.getElementById('linePicker');
+        const status = document.getElementById('status');
 
-        // Add a tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        // Function to get color based on speed
-        function getColor(speed) {
-            return speed > 50 ? '#00FF00' : // Fast: Green
-               speed > 30 ? '#FFFF00' : // Medium: Yellow
-               speed > 10 ? '#FFA500' : // Slow: Orange
-                    '#FF0000';  // Very slow: Red
+        hourSlider.oninput = function() {
+            hourValue.textContent = this.value;
         }
 
-        // Load the CSV data
-        Papa.parse('../transport_data/modified_data/segment_data_202501191625.csv', {
-            download: true,
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                const data = results.data; // Parsed data
+        datePicker.oninput = function() {
+            dateValue.textContent = this.value;
+        }
 
-                // Create GeoJSON features from the data
-                const features = data.slice(0, Math.ceil(data.length / 10)).map(row => ({
-                    type: 'Feature',
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: row.segment
-                            .replace('LINESTRING (', '')
-                            .replace(')', '')
-                            .split(', ')
-                            .map(coord => coord.split(' ').map(Number))
-                    },
-                    properties: {
-                        line: row.line,
-                        vehicle_id: row.vehicle_id,
-                        speed_kmh: parseFloat(row.speed_kmh)
-                    }
-                }));
+        timeWindowSize.oninput = function() {
+        }
 
-                console.log("Starting to draw the lines");
-                // Create a GeoJSON layer
-                L.geoJSON({
-                    type: 'FeatureCollection',
-                    features: features
-                }, {
-                    style: function(feature) {
-                        return {
-                            color: getColor(feature.properties.speed_kmh),
-                            weight: 3
-                        };
-                    },
-                    onEachFeature: function(feature, layer) {
-                        layer.bindPopup(
-                            `Line: ${feature.properties.line}<br>` +
-                            `Vehicle ID: ${feature.properties.vehicle_id}<br>` +
-                            `Speed: ${feature.properties.speed_kmh.toFixed(2)} km/h`
-                        );
-                    }
-                }).addTo(map);
-                console.log("Finished drawing the lines");
+        linePicker.oninput = function() {
+        }
+        // Initialize the Leaflet map
+        const map = L.map('map').setView([59.437, 24.753], 12); // Centered at Tallinn, Estonia
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Fetch data from server and display on the map
+        async function loadData() {
+            const startTime = performance.now();
+            try {
+            console.log("loading data");
+            status.textContent = "Loading data...";
+            const startHour = hourSlider.value;
+            const endHour = parseInt(startHour) + 3;
+            const date = datePicker.value;
+            const line = linePicker.value;
+            const response = await fetch(`/api/speedsegments?startHour=${startHour}&endHour=${endHour}&date=${date}&line=${line}&type=1`);
+            console.log("response got");
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
             }
-        });
+
+            const data = await response.json();
+            console.log("data: ", data);
+            status.textContent = `Loaded ${data.length} rows`;
+
+            // Clear existing layers
+            map.eachLayer(layer => {
+                if (layer instanceof L.GeoJSON) {
+                map.removeLayer(layer);
+                }
+            });
+
+            data.forEach(row => {
+                const {line, segment, speed_kmh } = row;
+
+                // Parse GeoJSON directly
+                const geojson = JSON.parse(segment);
+
+                //if (speed_kmh > 5){
+                //return
+               // }
+
+                // Determine color based on speed
+                const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
+
+                // Add the GeoJSON as a layer
+                L.geoJSON(geojson, {
+                style: {
+                    color,
+                    weight: 6
+                }
+                }).addTo(map)
+                .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}`);
+            });
+            console.log("data loaded");
+
+            } catch (error) {
+            console.error('Error loading data:', error);
+            } finally {
+            const endTime = performance.now();
+            console.log(`Data loading took ${(endTime - startTime) / 1000} seconds.`);
+            status.textContent = `Data loading took ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
+            }
+        }
+
+        loadData();
     </script>
 </body>
 </html>
