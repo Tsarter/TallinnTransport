@@ -35,7 +35,7 @@ def fetch_realtime_data(file_type="json", url=REALTIME_URL):
         data = response.json()
     date = datetime.now().strftime("%Y-%m-%d")
     time = datetime.now().strftime("%H-%M-%S")
-    save_to_database(data, f"{date}_{time}")
+    # save_to_database(data, f"{date}_{time}")
 
 # Function to fetch the current interruptions data
 def fetch_interruptions():
