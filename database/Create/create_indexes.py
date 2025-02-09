@@ -5,9 +5,15 @@ conn = sqlite3.connect(
 )
 cursor = conn.cursor()
 
+#cursor.execute(
+#    """
+#CREATE INDEX idx_type_line_destination ON features(line, destination,type);
+#"""
+#)
+
 cursor.execute(
     """
-CREATE INDEX idx_type_line_destination ON features(line, destination,type);
+CREATE INDEX idx_datetime ON features(date, time);
 """
 )
 
