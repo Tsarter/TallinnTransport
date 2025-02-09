@@ -82,9 +82,9 @@
                 // Parse GeoJSON directly
                 const geojson = JSON.parse(segment);
 
-                if (speed_kmh > 5){
-                return
-                }
+                //if (speed_kmh > 5){
+                //return
+               // }
 
                 // Determine color based on speed
                 const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
