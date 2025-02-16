@@ -24,7 +24,7 @@ const pool = new Pool({
 app.get("/speedsegments", async (req, res) => {
   try{
   console.log(req.query);
-  const { type, line, date, startHour, endHour } = req.query;
+  const { type, line, date, startHour, endHour,maxSpeed } = req.query;
 
   if (!date || !startHour || !endHour) {
     return res.status(400).send("Date, startHour, and endHour are required");
@@ -39,7 +39,7 @@ app.get("/speedsegments", async (req, res) => {
       path.join(__dirname, "speed_segment.sql"),
       "utf8"
     );
-    const queryParams = [date, startTime, endTime];
+    const queryParams = [date, startTime, endTime, maxSpeed];
 
     // Execute the query
     const result = await pool.query(query, queryParams);

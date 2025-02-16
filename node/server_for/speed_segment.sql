@@ -8,7 +8,7 @@ WITH speed_data AS (
         LEAD(geom) OVER (PARTITION BY line, vehicle_id ORDER BY datetime) AS next_point,
         LEAD(datetime) OVER (PARTITION BY line, vehicle_id ORDER BY datetime) AS next_time
     FROM realtimedata
-    WHERE DATE(datetime) = $1 and datetime BETWEEN $2 AND $3 /* AND line = $4 */
+    WHERE DATE(datetime) = $1 and datetime BETWEEN $2 AND $3 
 ),
 segment_data AS (
     SELECT 
@@ -34,7 +34,7 @@ SELECT
     segment,
     speed_kmh
 FROM segment_data
-WHERE time_diff_seconds <= 60 and speed_kmh < 5; -- Only include points where the time difference is 1 minute or less
+WHERE time_diff_seconds <= 60 and speed_kmh < $4; -- Only include points where the time difference is 1 minute or less
 /* 
 tallinn_stops AS (
     SELECT 

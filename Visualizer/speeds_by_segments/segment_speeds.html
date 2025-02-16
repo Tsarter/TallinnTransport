@@ -32,6 +32,11 @@
 
         <br><br>
 
+        <label for="speedLimit">Show speeds under:</label>
+        <input type="number" id="speedLimit" name="speedLimit" min="1" max="100" value="5">
+
+        <br><br>
+
         <label for="linePicker">not working</label>
         <input type="text" id="linePicker" name="linePicker" placeholder=" (not working)">
         <br><br>
@@ -47,6 +52,7 @@
         const timeWindowSize = document.getElementById('timeWindowSize');
         const linePicker = document.getElementById('linePicker');
         const status = document.getElementById('status');
+        const speedLimit = document.getElementById('speedLimit');
 
         hourSlider.oninput = function() {
             hourValue.textContent = this.value;
@@ -76,10 +82,11 @@
             console.log("loading data");
             status.textContent = "Loading data...";
             const startHour = hourSlider.value;
-            const endHour = parseInt(startHour) + 3;
+            const endHour = parseInt(startHour) + parseInt(timeWindowSize.value);
             const date = datePicker.value;
-            const line = linePicker.value;
-            const response = await fetch(`/api/speedsegments?startHour=${startHour}&endHour=${endHour}&date=${date}&line=${line}&type=1`);
+            const maxSpeed = speedLimit.value;
+            /* const line = linePicker.value; */
+            const response = await fetch(`/api/speedsegments?startHour=${startHour}&endHour=${endHour}&date=${date}&type=1&maxSpeed=${maxSpeed}`);
             console.log("response got");
 
             if (!response.ok) {
