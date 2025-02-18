@@ -37,8 +37,17 @@
 
         <br><br>
 
-        <label for="linePicker">not working</label>
-        <input type="text" id="linePicker" name="linePicker" placeholder=" (not working)">
+        <label for="linePicker">Choose line</label>
+        <input type="text" id="linePicker" name="linePicker" placeholder="Line">
+        <br><br>
+
+        <label for="typePicker">Choose bus,tram,trol</label>
+        <select id="typePicker" name="typePicker">
+            <option value="">All</option>
+            <option value="1">trol</option>
+            <option value="2">bus</option>
+            <option value="3">tram</option>
+        </select>
         <br><br>
         <button onclick="loadData()">Load Data</button> <p id="status"></p>
 
@@ -53,6 +62,7 @@
         const linePicker = document.getElementById('linePicker');
         const status = document.getElementById('status');
         const speedLimit = document.getElementById('speedLimit');
+        const typePicker = document.getElementById('typePicker');
 
         hourSlider.oninput = function() {
             hourValue.textContent = this.value;
@@ -82,11 +92,21 @@
             console.log("loading data");
             status.textContent = "Loading data...";
             const startHour = hourSlider.value;
-            const endHour = parseInt(startHour) + parseInt(timeWindowSize.value);
+            const tws = parseInt(timeWindowSize.value);
             const date = datePicker.value;
             const maxSpeed = speedLimit.value;
-            /* const line = linePicker.value; */
-            const response = await fetch(`/api/speedsegments?startHour=${startHour}&endHour=${endHour}&date=${date}&type=1&maxSpeed=${maxSpeed}`);
+            const line = linePicker.value;
+            const type = typePicker.value;
+            
+            let url = "/api/speedsegments?"
+            url += `startHour=${startHour}`
+            url += `&tws=${tws}`
+            url += `&date=${date}`
+            url += `&line=${line}`
+            url += `&maxSpeed=${maxSpeed}`
+            url += `&type=${type}`
+
+            const response = await fetch(url);
             console.log("response got");
 
             if (!response.ok) {
@@ -95,7 +115,7 @@
 
             const data = await response.json();
             console.log("data: ", data);
-            status.textContent = `Loaded ${data.length} rows`;
+            status.textContent = `Loaded ${data.length} points`;
 
             // Clear existing layers
             map.eachLayer(layer => {
@@ -109,10 +129,6 @@
 
                 // Parse GeoJSON directly
                 const geojson = JSON.parse(segment);
-
-                //if (speed_kmh > 5){
-                //return
-               // }
 
                 // Determine color based on speed
                 const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
@@ -128,12 +144,12 @@
             });
             console.log("data loaded");
 
+            const endTime = performance.now();
+            status.textContent += ` in ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
             } catch (error) {
             console.error('Error loading data:', error);
+            status.textContent = 'Error loading data';
             } finally {
-            const endTime = performance.now();
-            console.log(`Data loading took ${(endTime - startTime) / 1000} seconds.`);
-            status.textContent = `Data loading took ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
             }
         }
 

@@ -3,4 +3,4 @@ proxy
 **/node_modules/
 *.pyc
 *.csv
-env.env
+*.env
