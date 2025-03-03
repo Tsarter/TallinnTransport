@@ -22,7 +22,7 @@
         <br><br>
 
         <label for="datePicker">Date:</label>
-        <input type="date" id="datePicker" name="datePicker" value="2024-08-15" min="2024-07-06" max="2024-10-05">
+        <input type="date" id="datePicker" name="datePicker" value="2024-08-15" min="2024-07-06" max="2024-11-05">
         <span id="dateValue">2024-08-15</span>
 
         <br><br>
@@ -49,6 +49,10 @@
             <option value="3">tram</option>
         </select>
         <br><br>
+
+        <label class="tooltip" for="disStops">Disable near stops <span class="tooltiptext">This will filter out all segments that are closer <br> than given number in meters to any stop </span> </label>
+        <input type="text" id="disStops" name="disStops" placeholder="0m" title="Disable stops that are near each other">
+        <br><br>
         <button onclick="loadData()">Load Data</button> <p id="status"></p>
 
     </div>
@@ -63,6 +67,7 @@
         const status = document.getElementById('status');
         const speedLimit = document.getElementById('speedLimit');
         const typePicker = document.getElementById('typePicker');
+        const disableStops = document.getElementById('disStops');
 
         hourSlider.oninput = function() {
             hourValue.textContent = this.value;
@@ -97,6 +102,7 @@
             const maxSpeed = speedLimit.value;
             const line = linePicker.value;
             const type = typePicker.value;
+            const disStops = disableStops.value;
             
             let url = "/api/speedsegments?"
             url += `startHour=${startHour}`
@@ -105,10 +111,14 @@
             url += `&line=${line}`
             url += `&maxSpeed=${maxSpeed}`
             url += `&type=${type}`
+            url += `&disStops=${disStops}`
 
             const response = await fetch(url);
             console.log("response got");
-
+            if (response.status === 400) {
+                let data = await response.json();
+                throw new Error(data.error);
+            }
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
             }
@@ -148,12 +158,41 @@
             status.textContent += ` in ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
             } catch (error) {
             console.error('Error loading data:', error);
-            status.textContent = 'Error loading data';
+            status.textContent = error;
             } finally {
             }
         }
 
         loadData();
     </script>
+
+<style>
+    /* Tooltip container */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+    }
+    
+    /* Tooltip text */
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 190px;
+      background-color: black;
+      color: #fff;
+      text-align: center;
+      padding: 10px 0;
+      border-radius: 6px;
+     
+      /* Position the tooltip text - see examples below! */
+      position: absolute;
+      z-index: 1;
+    }
+    
+    /* Show the tooltip text when you mouse over the tooltip container */
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+    }
+    </style>
 </body>
 </html>

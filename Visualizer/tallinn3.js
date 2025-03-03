@@ -1330,14 +1330,22 @@ pg.loadInterruptions = function (
       callback(ti.notices);
     }
   } else {
-    var announcements_url =
+    /*
+    By idk who
+     var announcements_url =
       location.hostname == "localhost" || true
         ? "announcements.json"
-        : "https://transport.tallinn.ee/tallinn-announcements-curl.php";
-    var interruptions_url =
+        : "https://transport.tallinn.ee/tallinn-announcements-curl.php"; 
+       var interruptions_url =
       location.hostname == "localhost" || true
         ? "interruptions.json"
         : "https://transport.tallinn.ee/tallinn-interruptions-curl.php";
+*/
+    // By Tanel aka me 
+    var announcements_url ="https://tallinn.simplytobo.eu/proxy/announcements.json";
+
+    var interruptions_url =
+      location.hostname == "https://tallinn.simplytobo.eu/announcements.json";
 
     ti.fDownloadUrl("get", announcements_url, function (announcements_txt) {
       try {
@@ -2770,6 +2778,8 @@ pg.fCreateNavigation = function (callback) {
 };
 
 pg.renderSearch = function (page) {
+
+  return;
   //console.log("render search...");
 
   pg.fCreateNavigation(function (navigation) {

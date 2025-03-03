@@ -1,3 +1,10 @@
+/*
+Important!
+
+The routes are served over /api path defined in the nginx configuration file
+
+*/
+
 // Import necessary modules
 const express = require("express");
 const { Pool } = require("pg");
@@ -25,7 +32,7 @@ function getQuery(filename) {
 }
   
 function validateParams(query) {
-  const { type, line, date, startHour, tws,maxSpeed } = query;
+  const { type, line, date, startHour, tws,maxSpeed, disStops } = query;
   
   let inputDate = new Date(date);
   let startDate = new Date("2024-06-06");
@@ -55,6 +62,11 @@ function validateParams(query) {
   if (!["","1","2","3"].includes(type)) {
     return "Type must be empty 1, 2 or 3";
   }
+
+  if (disStops && (!Number.isInteger(Number(disStops)) || Number(disStops) > 1000)) {
+    return "filter stops must be an integer"
+  }
+
   return "";
 }
 
@@ -65,10 +77,10 @@ app.get("/speedsegments", async (req, res) => {
   const isValidRes = validateParams(req.query);
   if (isValidRes !== "") {
     console.log(isValidRes);
-    return res.status(400).send(isValidRes);
+    return res.status(400).json({ error: isValidRes });
   }
 
-  const { type, line, date, startHour, tws,maxSpeed } = req.query;
+  const { type, line, date, startHour, tws,maxSpeed, disStops } = req.query;
 
   if (!date || !startHour || !tws) {
     return res.status(400).send("Date, startHour, and endHour are required");
@@ -80,6 +92,7 @@ app.get("/speedsegments", async (req, res) => {
     let speed_data = getQuery("speed_data.sql");
     let segment_data = getQuery("segment_data.sql");
     let select_data = getQuery("select_data.sql");
+    let not_within_stop = getQuery("not_within_stop.sql");
 
     const startTime = `${date} ${startHour}:00:00`;
     
@@ -97,9 +110,17 @@ app.get("/speedsegments", async (req, res) => {
     speed_data += type ? ` AND type = ${type}` : '';
 
     select_data += maxSpeed ? ` AND speed_kmh < ${maxSpeed}` : '';
-    // Combine all parts of the query
-    const query = `${speed_data}), ${segment_data} ${select_data};`;
-    //const queryParams = [date, startTime, endTime, maxSpeed];
+
+    let query = "";
+    if (disStops) {
+      not_within_stop += disStops ? ` ${disStops}` : '';
+      query = `${speed_data}), ${segment_data} ${select_data} ${not_within_stop}));`;
+    }
+    else{
+      // Combine all parts of the query
+      query = `${speed_data}), ${segment_data} ${select_data};`;
+    }
+
     console.log(query);
     // Execute the query
     const result = await pool.query(query);
@@ -113,6 +134,8 @@ app.get("/speedsegments", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+
 
 // Start the server
 app.listen(port, () => {

@@ -344,7 +344,6 @@ typeof window == "object" &&
     return 0;
   }),
   (ti.loadData = function () {
-    debugger;
     if (typeof cfg === "object" && cfg.city && cfg.city.datadir) {
       var a = new Date();
       location.pathname.indexOf("test.html") < 0
@@ -5972,7 +5971,6 @@ var ej = function (a) {
         });
       },
       search: function (str, callback) {
-        debugger;
         var str2 = ti.toAscii(str.trim());
         if (this.suggestions[str2]) callback(this.suggestions[str2]);
         else {
@@ -11702,7 +11700,6 @@ jq(window).bind("resize", function (a) {
             (location.href = a));
         return;
       }
-      debugger;
       var c = pg.city + "_" + pg.transport;
       pg.transport ||
         ((c = "city"),
