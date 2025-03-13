@@ -32,7 +32,7 @@ chunk_size = 100000
 
 # SQLite query to select all records
 sqlite_cursor.execute(
-    "SELECT id, date, time, type, line, latitude, longitude, direction,unknown1, unknown2, destination, vehicle_id FROM features ORDER BY date, time;"
+    "SELECT id, date, time, type, line, latitude, longitude, direction,unknown1, unknown2, destination, vehicle_id FROM features where date > '2024-12-26'  ORDER BY date, time ;"
 )
 
 # rows in wrong order, skip first 450000 rows.
@@ -64,21 +64,34 @@ while True:
         # split longitude so that 59437530.0 becomes 59.437530
         latitude = latitude / 1000000
         longitude = longitude / 1000000
-
-        geom = f"SRID=4326;POINT({longitude} {latitude})"
-        records.append(
-            (
-                datetime_obj,
-                type_,
-                line,
-                vehicle_id,
-                direction,
-                destination,
-                geom,
-                unknown1,
-                unknown2,
+        if (
+            datetime_obj
+            and isinstance(type_, int)
+            and isinstance(line, str)
+            and isinstance(latitude, float)
+            and isinstance(longitude, float)
+            and isinstance(direction, int)
+            and isinstance(destination, str)
+            and isinstance(vehicle_id, int)
+            and isinstance(unknown1, str)
+            and isinstance(unknown2, int)
+        ):
+            geom = f"SRID=4326;POINT({longitude} {latitude})"
+            records.append(
+                (
+                    datetime_obj,
+                    type_,
+                    line,
+                    vehicle_id,
+                    direction,
+                    destination,
+                    geom,
+                    unknown1,
+                    unknown2,
+                )
             )
-        )
+        else:
+            print("Invalid record:", row)
 
     # Insert data into TimescaleDB in batches
     print(f"last record time: {datetime_obj}")
