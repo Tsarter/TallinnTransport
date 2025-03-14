@@ -26,7 +26,7 @@ DB_CONFIG = {
 }
 
 # Path to your main folder containing daily folders
-BASE_FOLDER = "D:/Transport_baka/Backup_05_10_2024/transport_data/realtime_data"
+BASE_FOLDER = "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data/realtime_data"
 
 # Connect to PostgreSQL
 conn = psycopg2.connect(**DB_CONFIG)
@@ -65,6 +65,38 @@ def process_json(file_path):
 
     return rows
 
+def process_txt(file_path):
+    with open(file_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    day = file_path.split("/")[-2]
+    time = file_path.split("/")[-1].split(".")[0].replace("-", ":")
+    timestamp = datetime.fromisoformat(f"{day}T{time}")
+    if timestamp < datetime(2025, 2, 15):
+        return []
+    rows = []
+
+    for line in lines:
+        parts = line.strip().split(",")
+        if len(parts) != 10:
+            continue
+        lon = int(parts[2]) / 1000000
+        lat = int(parts[3]) / 1000000
+        rows.append(
+            (
+                timestamp,  # datetime
+                parts[0],  # type
+                parts[1],  # line
+                parts[6],  # vehicle_id
+                parts[5],  # direction
+                parts[9],  # destination
+                f"SRID=4326;POINT({lon} {lat})",  # geom
+                parts[7],  # unknown1
+                parts[8],  # unknown2
+            )
+        )
+
+    return rows
+
 
 stop = False
 # Iterate through folders and process JSON files
@@ -76,31 +108,34 @@ for day_folder in sorted(os.listdir(BASE_FOLDER)):
 
     print(f"Processing {day_folder}...")
 
-    for json_file in sorted(os.listdir(day_path)):
-        json_path = os.path.join(day_path, json_file)
+    rows = []
+    for file in sorted(os.listdir(day_path)):
+        json_path = os.path.join(day_path, file)
 
-        if not json_file.endswith(".json"):
+        if file.endswith(".json"):
             # Stop if we encounter a non-JSON file
-            print(f"Skipping {json_file}...")
-            continue
+           rows.extend(process_json(json_path))
+        
+        elif file.endswith(".txt"):
+            rows.extend(process_txt(json_path))
 
-        rows = process_json(json_path)
         if not rows:
-            print(f"No data extracted from {json_file}")
+            print(f"No data extracted from {file}")
             continue
         # Insert into PostgreSQL
-        insert_query = """
-            INSERT INTO realtimedata (
-                datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2
-            ) VALUES %s
-            ON CONFLICT DO NOTHING;
-        """
-        execute_values(cur, insert_query, rows)
         if stop == True:
             conn.commit()
             cur.close()
             conn.close()
             break
+
+    insert_query = """
+        INSERT INTO realtimedata (
+            datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2
+        ) VALUES %s
+        ON CONFLICT DO NOTHING;
+    """    
+    execute_values(cur, insert_query, rows)
     conn.commit()
 cur.close()
 conn.close()

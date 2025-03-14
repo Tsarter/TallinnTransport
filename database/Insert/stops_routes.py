@@ -20,7 +20,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 
 # Parse XML file
-tree = ET.parse("database\Insert\stops.xml")
+tree = ET.parse("iaib/database/Insert/stops.xml")
 root = tree.getroot()
 
 # Insert stops

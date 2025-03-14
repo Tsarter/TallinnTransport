@@ -17,7 +17,7 @@ from config import (
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 print(os.getcwd())
-from iaib.database.data_to_db import save_to_database
+from iaib.folder_saving.data_to_timescaledb import save_to_database
 
 
 def fetch_realtime_data(file_type="json", url=REALTIME_URL):
@@ -33,9 +33,14 @@ def fetch_realtime_data(file_type="json", url=REALTIME_URL):
         data = response.text
     if file_type == "json":
         data = response.json()
-    date = datetime.now().strftime("%Y-%m-%d")
-    time = datetime.now().strftime("%H-%M-%S")
-    # save_to_database(data, f"{date}_{time}")
+    
+
+    timestamp2 = datetime.now()
+    try:
+        save_to_database(data, timestamp2)
+    except Exception as e:
+        print(f"Error saving to database: {e}", flush=True)
+        print(traceback.format_exc(), flush=True)
 
 # Function to fetch the current interruptions data
 def fetch_interruptions():
@@ -77,13 +82,14 @@ def check_and_save_interruptions():
         with open(f"{folder_path}/{timestamp}.json", "w", encoding="utf-8") as file:
             json.dump(new_data, file)
         if new_is_empty:
-            print(f"Interruption ended at {timestamp}")
+            print(f"Interruption ended at {timestamp}", flush=True)
         else:
-            print(f"New interruption started at {timestamp}")
+            print(f"New interruption started at {timestamp}", flush=True)
 
 
 def main():
     last_interruptions_time = 0
+    print("Starting the data fetching loop...", flush=True)
     while True:
         
         start_time = time.time()
@@ -101,14 +107,14 @@ def main():
 
         except requests.exceptions.RequestException as e:
             # Handle network-related errors
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Network error: {e}")
+            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Network error: {e}", flush=True)
         except sqlite3.DatabaseError as e:
             # Handle database-related errors
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Database error: {e}")
+            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Database error: {e}", flush=True)
         except Exception as e:
             # Catch-all for other exceptions
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Unexpected error: {e}")
-            print(traceback.format_exc())  # Print the full traceback for debugging
+            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Unexpected error: {e}", flush=True)
+            print(traceback.format_exc(), flush=True)  # Print the full traceback for debugging
 
 
         # Sleep for 30 seconds before fetching realtime data again

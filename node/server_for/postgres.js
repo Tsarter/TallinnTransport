@@ -27,8 +27,8 @@ const pool = new Pool({
   port: process.env.POSTGRES_PORT, // Default PostgreSQL port
 });
 
-function getQuery(filename) {
-  return fs.readFileSync(path.join(__dirname, filename), "utf8");
+function getQuery(type, filename) {
+  return fs.readFileSync(path.join(__dirname+"/sql/" + type + "/", filename), "utf8");
 }
   
 function validateParams(query) {
@@ -89,10 +89,10 @@ app.get("/speedsegments", async (req, res) => {
   try {
 
     // Put together query string
-    let speed_data = getQuery("speed_data.sql");
-    let segment_data = getQuery("segment_data.sql");
-    let select_data = getQuery("select_data.sql");
-    let not_within_stop = getQuery("not_within_stop.sql");
+    let speed_data = getQuery("segment", "speed_data.sql");
+    let segment_data =  getQuery("segment","segment_data.sql");
+    let select_data =  getQuery("segment","select_data.sql");
+    let not_within_stop =  getQuery("segment","not_within_stop.sql");
 
     const startTime = `${date} ${startHour}:00:00`;
     
@@ -135,6 +135,16 @@ app.get("/speedsegments", async (req, res) => {
   }
 });
 
+app.get("/speedgraph", async (req, res) => {
+  try{
+    let query = getQuery("speedgraph", "speedgraph.sql");
+    const result = await pool.query(query);
+    res.json(result.rows);
+  }catch (err) {
+    console.error("Error querying the database:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 
 // Start the server

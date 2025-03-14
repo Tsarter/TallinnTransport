@@ -22,7 +22,7 @@
         <br><br>
 
         <label for="datePicker">Date:</label>
-        <input type="date" id="datePicker" name="datePicker" value="2024-08-15" min="2024-07-06" max="2024-11-05">
+        <input type="date" id="datePicker" name="datePicker" value="2024-08-15" min="2024-07-06">
         <span id="dateValue">2024-08-15</span>
 
         <br><br>
@@ -135,7 +135,7 @@
             });
 
             data.forEach(row => {
-                const {line, segment, speed_kmh } = row;
+                const {line, segment, speed_kmh, vehicle_id } = row;
 
                 // Parse GeoJSON directly
                 const geojson = JSON.parse(segment);
@@ -150,7 +150,7 @@
                     weight: 6
                 }
                 }).addTo(map)
-                .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}`);
+                .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}`);
             });
             console.log("data loaded");
 
