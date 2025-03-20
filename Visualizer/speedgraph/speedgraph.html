@@ -109,11 +109,12 @@
                 }
             }
         });
-        function loadRoute(vehicle_id){
-                        const [vehicleType, lineNumber] = vehicle_id.split("_");
-                        const routeFileName = `${vehicleType}_${lineNumber}_routes.txt`;
+        function loadRoute(line, vehicleType = "bus"){
+                        //const [vehicleType, lineNumber] = vehicle_id.split("_");
+                        vehicleType = "bus";
+                        const routeFileName = `${vehicleType}_${line}_routes.txt`;
                         
-                        fetch(`2024-10-04/${routeFileName}`)
+                        fetch(`/transport_data/transport_data/routes_data/2025-03-10/${routeFileName}`)
                         .then((response) => response.text())
                         .then((routeData) => {
                             const route = routeData.split("\n")[1]; // Simplified: using second line
@@ -175,100 +176,94 @@
 
 
         // Function to load coordinates and distances from a JSON file
-        async function loadCoordinates(vehicle_id) {
+        async function loadCoordinates(vehicle_id, startTime) {
             try {
-                const response = await fetch(`movements/bus_movement_${vehicle_id}.json`); // Load the JSON file
-                const data = await response.json(); // Parse the JSON data
-                const coordinates = data.coordinates;
-                const distances = data.distances;
-                const times = data.times
-                
+                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&startTime=${startTime}`); // Fetch data from API
+                const data = await response.json(); // Parse JSON response
+
+                // Filter data for the given vehicle_id
+                if (data.length === 0) {
+                    console.error("No data found for vehicle:", vehicle_id);
+                    return;
+                }
+
+                // Extract speed and time data
+                const times = data.map(entry => entry.datetime);
+                const speeds = data.map(entry => entry.speed_kmh);
+
+                // Update the slider max value based on data length
+                slider.max = speeds.length - 1;
+
                 let index = 0;
 
-                if (coordinates && coordinates.length > 0) {
-                    // Update slider max value based on number of coordinates
-                    slider.max = coordinates.length - 1;
+                // Function to update the chart and slider display
+                function updateSpeedDisplay(index) {
+                    sliderValue.textContent = `Index: ${index}, Time: ${times[index]}, Speed: ${Math.round(speeds[index])} km/h`;
+                    highlightChartPoint(index);
+                }
 
-                    // Create a marker for the bus
-                    let busMarker = L.marker([coordinates[index][1],coordinates[index][0]]).addTo(map);
+                // Event listener for the slider to update speed display
+                slider.addEventListener('input', function() {
+                    const index = parseInt(this.value);
+                    updateSpeedDisplay(index);
+                });
 
-                    // Function to update the bus position based on slider value
-                    function updateBusPosition(index) {
-                        busMarker.setLatLng([coordinates[index][1], coordinates[index][0]]);
-                        busMarker.bindPopup(vehicle_id + " speed: " + Math.round(distances[index] / 30 * 3.6) + " km/h,dist: " +  Math.round(distances[index])+ " m").openPopup();
-                    }
+                // Populate the speed chart
+                function populateSpeedChart() {
+                    let prev_speed1 = 0, prev_speed2 = 0, prev_speed3 = 0;
+                    let avgSpeed = 0;
 
-                    // Event listener for the slider to update bus position
-                    slider.addEventListener('input', function(){
-                        const index = parseInt(this.value);
-                        updateBusPosition(index);
-                        sliderValue.textContent = index + " Clock: "+ times[index]; // Update displayed value
-                        highlightChartPoint(index);
+                    speeds.forEach((speedKmh, i) => {
+                        if (i === 0) return;
+                        speedChart.data.labels.push(new Date(times[i]).toLocaleTimeString('en-US', { hour12: false }));
+                        speedChart.data.datasets[0].data.push((speedKmh + prev_speed1 + prev_speed2 + prev_speed3) / 4);
+                        speedChart.data.datasets[0].pointRadius.push(0);
+                        speedChart.data.datasets[0].pointBackgroundColor.push('rgba(75, 192, 192, 1)');
+
+                        prev_speed3 = prev_speed2;
+                        prev_speed2 = prev_speed1;
+                        prev_speed1 = speedKmh;
+                        avgSpeed += speedKmh;
                     });
 
-                    // Populate the speed chart based on the distances
-                    function populateSpeedChart() {
-                        prev_speed1 = 0
-                        prev_speed2 = 0
-                        prev_speed3 = 0
-                        let avgSpeed = 0
-                        distances.forEach((distance, i) => {
-                            if (i == 0) return
-                            const deltaTime = (new Date(times[i]) - new Date(times[i - 1]))/1000
-                            const speedKmh = Math.round(distance / deltaTime * 3.6); // Convert m/s to km/h
-                            speedChart.data.labels.push(i * deltaTime);  // Assuming 30-second intervals
-                            speedChart.data.datasets[0].data.push((speedKmh + prev_speed1 + prev_speed2 + prev_speed3)/4);
-                            speedChart.data.datasets[0].pointRadius.push(0);
-                            speedChart.data.datasets[0].pointBackgroundColor.push('rgba(75, 192, 192, 1)');
-
-                            prev_speed3 = prev_speed2
-                            prev_speed2 = prev_speed1
-                            prev_speed1 = speedKmh
-                            avgSpeed = avgSpeed + speedKmh
-                            
-                        });
-                        avgSpeed = avgSpeed / distances.length
-                        speedChart.data.datasets[1].data = Array(distances.length).fill(avgSpeed)
-                        speedChart.update();
-                    }
-                    let highlightedIndex = null; // To keep track of the currently highlighted point
-
-                    function highlightChartPoint(index) {
-                        if (highlightedIndex !== null) {
-                            // Reset the previously highlighted point's style
-                            speedChart.data.datasets[0].pointBackgroundColor[highlightedIndex] = 'rgba(75, 192, 192, 1)';  // Default color
-                            speedChart.data.datasets[0].pointRadius[highlightedIndex] = 0; // Default radius
-                        }
-                        // Highlight the current point
-                        speedChart.data.datasets[0].pointBackgroundColor[index] = 'rgba(255, 99, 132, 1)'; // Highlight color
-                        speedChart.data.datasets[0].pointRadius[index] = 6; // Larger radius for highlight
-
-                        // Keep track of the highlighted index
-                        highlightedIndex = index;
-
-                        // Update the chart to reflect changes
-                        speedChart.update();
-                    }
-                
-
-                    // Call the function to populate the speed chart
-                    populateSpeedChart();
-
-                } else {
-                    console.error("No coordinates found in the file.");
+                    avgSpeed /= speeds.length;
+                    speedChart.data.datasets[1].data = Array(speeds.length).fill(avgSpeed);
+                    speedChart.update();
                 }
+
+                let highlightedIndex = null;
+
+                function highlightChartPoint(index) {
+                    if (highlightedIndex !== null) {
+                        speedChart.data.datasets[0].pointBackgroundColor[highlightedIndex] = 'rgba(75, 192, 192, 1)';
+                        speedChart.data.datasets[0].pointRadius[highlightedIndex] = 0;
+                    }
+                    speedChart.data.datasets[0].pointBackgroundColor[index] = 'rgba(255, 99, 132, 1)';
+                    speedChart.data.datasets[0].pointRadius[index] = 6;
+                    highlightedIndex = index;
+                    speedChart.update();
+                }
+
+                // Initialize display and chart
+                updateSpeedDisplay(index);
+                populateSpeedChart();
+
             } catch (error) {
-                console.error("Error loading coordinates:", error);
+                console.error("Error loading speed data:", error);
             }
         }
+
         const urlParams = new URLSearchParams(window.location.search);
         const default_vehicle_id = "bus_24_1158"
-        const vehicle_id = urlParams.get('vehicle_id') ?? "bus_24_1158"
+        const vehicle_id = urlParams.get('vehicle_id') ?? "1158"
+        const startTime = urlParams.get('startTime') ?? "2025-03-10 12:00:00"
+        const line = urlParams.get('line') ?? "24"
+        const type = urlParams.get('type') ?? "bus"
         fileSelect.options[0].innerHTML = vehicle_id;
 
         // Call the function to load the coordinates from the file
-        loadCoordinates(vehicle_id);
-        //loadRoute(vehicle_id)
+        loadCoordinates(vehicle_id, startTime);
+        loadRoute(line, type)
     </script>
 </body>
 </html>

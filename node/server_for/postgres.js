@@ -32,8 +32,12 @@ function getQuery(type, filename) {
 }
   
 function validateParams(query) {
-  const { type, line, date, startHour, tws,maxSpeed, disStops } = query;
+  const { type, line, date, startHour, tws,maxSpeed, disStops, vehicle_id, datetime } = query;
   
+  // Validate that date is in YYYY-MM-DD
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return "Date must be in the format YYYY-MM-DD";
+  }
   let inputDate = new Date(date);
   let startDate = new Date("2024-06-06");
   let today = new Date();
@@ -42,8 +46,12 @@ function validateParams(query) {
     return "Date must be between 6 june 2024 and today";
   }
 
+  if (datetime && !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(datetime)) {
+    return "datetime must be in the format YYYY-MM-DD HH:MM:SS";
+  }
+
   // Validate that startHour and endHour are integers
-  if (!Number.isInteger(Number(startHour)) || !Number.isInteger(Number(tws)) || Number(tws) > 124) {
+  if (startHour && (!Number.isInteger(Number(startHour)) || !Number.isInteger(Number(tws)) || Number(tws) > 124)) {
     return "startHour and endHour must be integers";
   }
   
@@ -59,12 +67,16 @@ function validateParams(query) {
 
   }
 
-  if (!["","1","2","3"].includes(type)) {
+  if (type && !["","1","2","3"].includes(type)) {
     return "Type must be empty 1, 2 or 3";
   }
 
   if (disStops && (!Number.isInteger(Number(disStops)) || Number(disStops) > 1000)) {
     return "filter stops must be an integer"
+  }
+
+  if (vehicle_id && !Number.isInteger(Number(vehicle_id))) {
+    return "vehicle_id must be an integer";
   }
 
   return "";
@@ -99,11 +111,8 @@ app.get("/speedsegments", async (req, res) => {
     let endTime = new Date(startTime);
     console.log(endTime, endTime.getHours() + tws);
     endTime.setHours(endTime.getHours() + parseInt(tws));
-    console.log(endTime);
     endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset());
-    console.log(endTime);
     endTime = endTime.toISOString().slice(0, 19).replace("T", " ");
-    console.log(endTime);
     // Add the last line dynamically
     speed_data += `datetime BETWEEN '${startTime}' AND  '${endTime}' `;
     speed_data += line ? ` AND line = '${line}'` : '';
@@ -136,8 +145,27 @@ app.get("/speedsegments", async (req, res) => {
 });
 
 app.get("/speedgraph", async (req, res) => {
+  
+  const isValidRes = validateParams(req.query);
+  if (isValidRes !== "") {
+    console.log(isValidRes);
+    return res.status(400).json({ error: isValidRes });
+  }
+  const { vehicle_id, startTime } = req.query;
+  if (!vehicle_id || !startTime) {
+    return res.status(400).send("vehicle_id and date are required");
+  }
   try{
-    let query = getQuery("speedgraph", "speedgraph.sql");
+    let endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 15);
+    endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset());
+    endTime = endTime.toISOString().slice(0, 19).replace("T", " ");
+
+    let select = getQuery("speedgraph", "speedgraph.sql");
+    let calculatins = getQuery("speedgraph", "speed_calculations.sql");
+    select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}'`;
+    const query = `${select} ), ${calculatins}`;
+    console.log(query);
     const result = await pool.query(query);
     res.json(result.rows);
   }catch (err) {

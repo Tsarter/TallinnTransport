@@ -20,3 +20,37 @@ Week of data missing 08.11.2024-16.11.2024
 
 17.11.2024 Added realtime endpoint from https://transport.tallinn.ee/gps.php -> https://transport.tallinn.ee/readfile.php?name=gps.txt
 Now I have route direction also.
+
+
+## 2025
+## March
+### Compression 2025-03-20
+Before size: 28gb
+After size: 3.8gb
+Compressed data in postgres using
+```sql
+ALTER TABLE realtimedata SET (
+    timescaledb.compress,
+    timescaledb.compress_orderby = 'datetime DESC',
+    timescaledb.compress_segmentby = 'line, vehicle_id'
+);
+```
+
+Check if compressed
+```sql
+SELECT hypertable_name, chunk_name, is_compressed
+FROM timescaledb_information.chunks
+WHERE hypertable_name = 'realtimedata';
+```
+
+Check size
+```sql
+SELECT * FROM hypertable_approximate_detailed_size('realtimedata');
+```
+
+### Backup 2025-03-20
+```bash
+pg_basebackup -U postgres -D /home/tanel/Documents/public_transport_project/HardDrive/backup -Ft -z -P
+```
+use this command  ```bash python3 -m http.server``` in folder and then open browser and just download to pc
+

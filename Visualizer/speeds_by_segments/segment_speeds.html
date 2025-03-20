@@ -16,14 +16,25 @@
     <div id="map"></div>
     <div style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
         <label for="hourSlider">Hour of Day:</label>
-        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="12">
-        <span id="hourValue">12</span>:00
+        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="">
+        <span id="hourValue"></span>:00
+        <script>
+            const currentHour = new Date().getHours() - 1;
+            const adjustedHour = currentHour >= 0 ? currentHour : 23; // Handle midnight case
+            document.getElementById('hourSlider').value = adjustedHour;
+            document.getElementById('hourValue').textContent = adjustedHour;
+        </script>
 
         <br><br>
 
         <label for="datePicker">Date:</label>
-        <input type="date" id="datePicker" name="datePicker" value="2024-08-15" min="2024-07-06">
-        <span id="dateValue">2024-08-15</span>
+        <input type="date" id="datePicker" name="datePicker" value="" min="2024-07-06">
+        <span id="dateValue"></span>
+        <script>
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('datePicker').value = today;
+            document.getElementById('dateValue').textContent = today;
+        </script>
 
         <br><br>
 
@@ -90,6 +101,11 @@
             maxZoom: 19,
         }).addTo(map);
 
+        function redirectToSpeedGraph(line, vehicle_id) {
+            const startTime = dateValue.textContent + " " + hourValue.textContent + ":00:00";
+            window.open(`/speedgraph/speedgraph.html?line=${line}&vehicle_id=${vehicle_id}&startTime=${startTime}`, '_blank');
+        }
+
         // Fetch data from server and display on the map
         async function loadData() {
             const startTime = performance.now();
@@ -150,7 +166,11 @@
                     weight: 6
                 }
                 }).addTo(map)
-                .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}`);
+                .bindPopup(`
+                    Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}
+                    <br>
+                    <button onclick="redirectToSpeedGraph('${line}', '${vehicle_id}')">View Speed Graph</button>
+                `);
             });
             console.log("data loaded");
 
