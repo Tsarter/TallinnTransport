@@ -8,4 +8,4 @@ WITH speed_data AS (
         LEAD(geom) OVER (PARTITION BY line, vehicle_id ORDER BY datetime) AS next_point,
         LEAD(datetime) OVER (PARTITION BY line, vehicle_id ORDER BY datetime) AS next_time
     FROM realtimedata
-    WHERE 
+    WHERE

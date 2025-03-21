@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2.extras import execute_batch
 from dotenv import load_dotenv
 import os
 
@@ -26,7 +27,9 @@ pg_cursor = pg_conn.cursor()
 start_time = datetime(2024, 7, 6, 13, 0, 0)  # Example start time: '2025-02-02 00:00:00'
 end_time = start_time + timedelta(hours=1)
 
-while True:
+runLoop = True
+
+while runLoop:
     # Execute the query to find vehicle speeds for the current hour's data
     pg_cursor.execute("""
     WITH vehicle_movements AS (
@@ -73,17 +76,22 @@ while True:
     print(f"Found {len(results)} speeds to insert for the hour {start_time} to {end_time}.")
     
     # Insert the results into the realtimedata table (inserting into the speed column)
-    for result in results:
-        vehicle_id,line,  datetime, speed_kmh = result
-        speed_kmh = int(speed_kmh)
-        if speed_kmh > 100:
-            continue
-        pg_cursor.execute("""
+    # Prepare a list of tuples for bulk update
+    update_data = [
+        (int(result[3]), result[2], result[1], result[0])  # (speed_kmh, datetime, line, vehicle_id)
+        for result in results if int(result[3]) <= 100  # Filter out speeds greater than 100
+    ]
+    # Update the data row by row using execute_batch
+    
+    execute_batch(pg_cursor, """
         UPDATE realtimedata
         SET speed = %s
-        WHERE datetime = %s AND line = %s AND vehicle_id = %s;
-        """, (speed_kmh, datetime, line, vehicle_id))
-    
+        WHERE datetime = %s
+          AND line = %s
+          AND vehicle_id = %s;
+        """, update_data)
+    # Commit the transaction to apply the updates
+
     # Commit the transaction to apply the updates
     pg_conn.commit()
 
@@ -91,5 +99,5 @@ while True:
     start_time = end_time
     end_time = start_time + timedelta(hours=1)
 
-# Close the connection when done
+# Close the connection when done  2024-07-11 02:59:56+03
 pg_conn.close()

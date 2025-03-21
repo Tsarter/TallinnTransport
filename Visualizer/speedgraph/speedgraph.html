@@ -33,9 +33,18 @@
         <option value="bus_10_2417">bus_10_2417</option> <option value="bus_10_2441">bus_10_2441</option> 
 
     </select>
+    <label for="timeWindowSize">Time Window Size (hours):</label>
+    <input type="number" id="timeWindowSize" min="1" value="15" step="1">
     <div id="speedChartContainer">
         <canvas id="speedChart"></canvas> <!-- Canvas for the speed chart -->
     </div>
+    <button id="reloadGraphButton">Reload Graph</button>
+    <script>
+        document.getElementById('reloadGraphButton').addEventListener('click', () => {
+            // reload page
+            window.location.reload();
+        });
+    </script>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
@@ -178,7 +187,8 @@
         // Function to load coordinates and distances from a JSON file
         async function loadCoordinates(vehicle_id, startTime) {
             try {
-                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&startTime=${startTime}`); // Fetch data from API
+                const tws = document.getElementById('timeWindowSize').value; 
+                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&startTime=${startTime}&tws=${tws}`); // Fetch data from API
                 const data = await response.json(); // Parse JSON response
 
                 // Filter data for the given vehicle_id
@@ -201,11 +211,19 @@
                     sliderValue.textContent = `Index: ${index}, Time: ${times[index]}, Speed: ${Math.round(speeds[index])} km/h`;
                     highlightChartPoint(index);
                 }
+                let busMarker = L.marker([data[0]["lat"], data[0]["lon"]]).addTo(map);
+
+                // Function to update the bus position based on slider value
+                function updateBusPosition(index) {
+                    busMarker.setLatLng([data[index]["lat"], data[index]["lon"]]);
+                    busMarker.bindPopup(`Speed: ${Math.round(speeds[index])} km/h`).openPopup();
+                }
 
                 // Event listener for the slider to update speed display
                 slider.addEventListener('input', function() {
                     const index = parseInt(this.value);
                     updateSpeedDisplay(index);
+                    updateBusPosition(index);
                 });
 
                 // Populate the speed chart
@@ -229,6 +247,7 @@
                     avgSpeed /= speeds.length;
                     speedChart.data.datasets[1].data = Array(speeds.length).fill(avgSpeed);
                     speedChart.update();
+        
                 }
 
                 let highlightedIndex = null;

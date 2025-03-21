@@ -117,6 +117,11 @@ app.get("/speedsegments", async (req, res) => {
     speed_data += `datetime BETWEEN '${startTime}' AND  '${endTime}' `;
     speed_data += line ? ` AND line = '${line}'` : '';
     speed_data += type ? ` AND type = ${type}` : '';
+    speed_data += `AND NOT EXISTS (
+      SELECT 1
+      FROM depos
+      WHERE ST_Within(geom::geometry, depos.location::geometry)
+  )`;
 
     select_data += maxSpeed ? ` AND speed_kmh < ${maxSpeed}` : '';
 
@@ -151,13 +156,16 @@ app.get("/speedgraph", async (req, res) => {
     console.log(isValidRes);
     return res.status(400).json({ error: isValidRes });
   }
-  const { vehicle_id, startTime } = req.query;
+  const { vehicle_id, startTime, tws } = req.query;
   if (!vehicle_id || !startTime) {
     return res.status(400).send("vehicle_id and date are required");
   }
+  if (!tws) {
+    tws = 15;
+  }
   try{
     let endTime = new Date(startTime);
-    endTime.setHours(endTime.getHours() + 15);
+    endTime.setHours(endTime.getHours() + parseInt(tws));
     endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset());
     endTime = endTime.toISOString().slice(0, 19).replace("T", " ");
 
