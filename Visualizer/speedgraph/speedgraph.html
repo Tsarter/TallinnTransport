@@ -34,7 +34,12 @@
 
     </select>
     <label for="timeWindowSize">Time Window Size (hours):</label>
-    <input type="number" id="timeWindowSize" min="1" value="15" step="1">
+    <input type="number" id="timeWindowSize" min="1" value="20" step="1">
+    <label for="depotSpeedsSelect">Depos / endstations:</label>
+    <select id="depotSpeedsSelect">
+        <option value="true">Disable</option>
+        <option value="false">Enable</option>
+    </select>
     <div id="speedChartContainer">
         <canvas id="speedChart"></canvas> <!-- Canvas for the speed chart -->
     </div>
@@ -71,8 +76,8 @@
             const selectedFile = event.target.value;
     
             if (selectedFile) {
-                // Reload the page with the selected file as a query parameter
-                window.location.href = `${window.location.pathname}?vehicle_id=${encodeURIComponent(selectedFile)}`;
+                // BS from before -> 
+                // window.location.href = `${window.location.pathname}?vehicle_id=${encodeURIComponent(selectedFile)}`;
             }
         });
 
@@ -185,10 +190,11 @@
 
 
         // Function to load coordinates and distances from a JSON file
-        async function loadCoordinates(vehicle_id, startTime) {
+        async function loadCoordinates(vehicle_id, startTime, depotSpeeds) {
             try {
                 const tws = document.getElementById('timeWindowSize').value; 
-                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&startTime=${startTime}&tws=${tws}`); // Fetch data from API
+                // const depotSpeeds = document.getElementById('depotSpeedsSelect').value;
+                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&startTime=${startTime}&tws=${tws}&disableDepos=${depotSpeeds}`); // Fetch data from API
                 const data = await response.json(); // Parse JSON response
 
                 // Filter data for the given vehicle_id
@@ -278,10 +284,11 @@
         const startTime = urlParams.get('startTime') ?? "2025-03-10 12:00:00"
         const line = urlParams.get('line') ?? "24"
         const type = urlParams.get('type') ?? "bus"
+        const disableDepos = urlParams.get('disableDepos') ?? "true"
         fileSelect.options[0].innerHTML = vehicle_id;
 
         // Call the function to load the coordinates from the file
-        loadCoordinates(vehicle_id, startTime);
+        loadCoordinates(vehicle_id, startTime, disableDepos);
         loadRoute(line, type)
     </script>
 </body>

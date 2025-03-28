@@ -16,14 +16,9 @@
     <div id="map"></div>
     <div style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
         <label for="hourSlider">Hour of Day:</label>
-        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="">
-        <span id="hourValue"></span>:00
-        <script>
-            const currentHour = new Date().getHours() - 1;
-            const adjustedHour = currentHour >= 0 ? currentHour : 23; // Handle midnight case
-            document.getElementById('hourSlider').value = adjustedHour;
-            document.getElementById('hourValue').textContent = adjustedHour;
-        </script>
+        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="12">
+        <span id="hourValue">12</span>:00
+
 
         <br><br>
 
@@ -102,7 +97,7 @@
         }).addTo(map);
 
         function redirectToSpeedGraph(line, vehicle_id) {
-            const startTime = dateValue.textContent + " " + hourValue.textContent + ":00:00";
+            const startTime = dateValue.textContent + " 05:00:00";
             window.open(`/speedgraph/speedgraph.html?line=${line}&vehicle_id=${vehicle_id}&startTime=${startTime}`, '_blank');
         }
 
@@ -158,12 +153,13 @@
 
                 // Determine color based on speed
                 const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
-
+                console.log("zoom", map.getZoom());
                 // Add the GeoJSON as a layer
                 L.geoJSON(geojson, {
                 style: {
                     color,
-                    weight: 6
+                    weight: 6,
+                    opacity: 0.5
                 }
                 }).addTo(map)
                 .bindPopup(`

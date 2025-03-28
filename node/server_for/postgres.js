@@ -156,7 +156,7 @@ app.get("/speedgraph", async (req, res) => {
     console.log(isValidRes);
     return res.status(400).json({ error: isValidRes });
   }
-  const { vehicle_id, startTime, tws } = req.query;
+  const { vehicle_id, startTime, tws, disableDepos } = req.query;
   if (!vehicle_id || !startTime) {
     return res.status(400).send("vehicle_id and date are required");
   }
@@ -172,6 +172,13 @@ app.get("/speedgraph", async (req, res) => {
     let select = getQuery("speedgraph", "speedgraph.sql");
     let calculatins = getQuery("speedgraph", "speed_calculations.sql");
     select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}'`;
+    if (disableDepos === "true") {
+      select += ` AND NOT EXISTS (
+        SELECT 1
+        FROM depos
+        WHERE ST_Within(geom::geometry, depos.location::geometry)
+      )`;
+    }
     const query = `${select} ), ${calculatins}`;
     console.log(query);
     const result = await pool.query(query);
