@@ -30,103 +30,116 @@ db_password = os.getenv("POSTGRES_PASSWORD")
 db_host = os.getenv("POSTGRES_HOST")
 db_port = os.getenv("POSTGRES_PORT")
 
-malformed_rows = []
 
-def calculate_speed(prev_row, curr_row):
-    if not prev_row or not curr_row:
-        return None
-    
-    prev_time, prev_geom = prev_row
-    curr_time, curr_geom = curr_row
-    
-    if not prev_geom or not curr_geom:
-        return None
-    
-    distance = geodesic((prev_geom[1], prev_geom[0]), (curr_geom[1], curr_geom[0])).meters
-    time_diff = (curr_time - prev_time).total_seconds()
-    
-    if 45 > time_diff > 0:
-        speed = int(distance / time_diff * 3.6)  # Convert m/s to km/h
-        return min(speed, 255)  # Limit to int2 max (PostgreSQL int2 max is 32767, but keeping it reasonable)
-    else:
-        # malformed_rows.append([prev_row,curr_row])
-        return None
 
-def migrate_data():
-    conn = psycopg2.connect(
-        dbname=db_name,
-        user=db_user,
-        password=db_password,
-        host=db_host,
-        port=db_port,
-    )
-    cur = conn.cursor()
-    
-    # Select distinct dates
-    date = '2024-07-07'
-    next_date = '2024-07-08'
-    enddate = datetime.today().strftime('%Y-%m-%d')
+# Select distinct dates
+date = '2024-09-08'
+next_date = '2024-09-09'
+enddate = datetime.today().strftime('%Y-%m-%d')
 
-    prev_data = {}
-    performanceStart = time.time()
-    prev_perf = 0
-    print(f"Start time: {performanceStart}")
-    totalRowsInserted = 0
-    while date < enddate:
-        print(f"Processing date: {date}")
-        fetch_query = f"""
-            SELECT datetime, line, vehicle_id, ST_X(geom::geometry) AS lon, ST_Y(geom::geometry) AS lat, direction, destination, type, unknown1, unknown2
-            FROM realtimedata
-            WHERE datetime >= '{date}' AND datetime < '{next_date}'
-            ORDER BY vehicle_id, datetime;
-        """
-        
-        cur.execute(fetch_query)
-        rows = cur.fetchall()
-        
-        data_to_insert = []
-        
-        for row in rows:
-            dt, line, vehicle_id, lon, lat, direction, destination, type_, unknown1, unknown2 = row
+
+
+# Database connection detail
+source_db_params = {
+    'dbname': db_name,
+    'user': db_user,
+    'password': db_password,
+    'host': db_host,
+    'port': db_port
+}
+target_db_params = {
+    'dbname': db_name,
+    'user': db_user,
+    'password': db_password,
+    'host': db_host,
+    'port': db_port
+}
+start_datetime = datetime.strptime("2024-07-11 00:00:00", "%Y-%m-%d %H:%M:%S")
+end_datetime = datetime.strptime("2024-07-12 00:00:00", "%Y-%m-%d %H:%M:%S")
+# Function to calculate speed and insert into the target database
+    # Create a connection to the source and target databases
+conn_source = psycopg2.connect(**source_db_params)
+conn_target = psycopg2.connect(**target_db_params)
+    
+# Create a cursor for the source and target connections
+cursor_source = conn_source.cursor()
+cursor_target = conn_target.cursor()
+
+try:
+    while True:
+        try:
+            # Calculate the start and end of the day for querying
             
-            speed = calculate_speed(prev_data.get(vehicle_id), (dt, (lon, lat)))
-            prev_data[vehicle_id] = (dt, (lon, lat))
+
+            # Query to fetch vehicle movements for the specific day
+            query = """
+            WITH vehicle_movements AS ( 
+                SELECT 
+                    *,
+                    LEAD(datetime) OVER (PARTITION BY vehicle_id ORDER BY datetime) AS next_datetime,
+                    LEAD(geom) OVER (PARTITION BY vehicle_id ORDER BY datetime) AS next_geom
+                FROM realtimedata
+                WHERE datetime >= %s AND datetime < %s
+            ), speed_calculation AS (
+                SELECT 
+                    *,
+                    ST_Distance(geom::geography, next_geom::geography) AS distance_meters,
+                    EXTRACT(EPOCH FROM (next_datetime - datetime)) AS time_seconds
+                FROM vehicle_movements
+                WHERE next_datetime IS NOT NULL
+            )
+            SELECT 
+                datetime, LEAST(type, 1000), line, vehicle_id, LEAST(direction,400), destination, geom, unknown1, unknown2,
+                LEAST(ROUND((distance_meters / time_seconds) * 3.6)::INT, 250) AS speed
+            FROM speed_calculation
+            WHERE time_seconds > 0;
+            """
             
-            data_to_insert.append((dt, type_, line, vehicle_id, direction, destination, f'SRID=4326;POINT({lon} {lat})', unknown1, unknown2, speed))
-            #data_to_insert = np.append(data_to_insert, [[dt, type_, line, vehicle_id, direction, destination, f'SRID=4326;POINT({lon} {lat})', unknown1, unknown2, speed]], axis=0)
+            cursor_source.execute(query, (start_datetime, end_datetime))
+            
+            # Fetch all results
+            rows = cursor_source.fetchall()
 
-            if  len(data_to_insert) >= 10000:
-                print(f"Batch inserting {len(data_to_insert)} rows")
-                print("Time spent: ", time.time() - performanceStart)
-                print("Delta: ",time.time() - performanceStart - prev_perf)
-                totalRowsInserted += len(data_to_insert)
-                print(f"Total rows inserted: {totalRowsInserted}")
-                prev_perf = time.time() - performanceStart
-                execute_values(cur, """
-                    INSERT INTO realtimedata2 (datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2, speed)
-                    VALUES %s
-                    ON CONFLICT (datetime, vehicle_id) DO NOTHING;
-                """, data_to_insert)
-                conn.commit()
-                data_to_insert = []
-                print(f"Batch inserting done")
+            if not rows:
+                print(f"No data found for {start_datetime.date()}.")
+                start_datetime = start_datetime + timedelta(days=1)
+                end_datetime = end_datetime + timedelta(days=1)
+                if start_datetime.date() > datetime.today().date():
+                    print("All data inserted successfully.")
+                    break
+                continue
+            # Prepare the data for batch insert
+            print(rows[0])
+            
+            # Insert data into realtimedata2 using batch insert
+            insert_query = """
+            INSERT INTO realtimedata2 (
+                datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2, speed
+            ) VALUES %s 
+            ON CONFLICT (datetime, vehicle_id) DO NOTHING
+            """
+            
+            execute_values(cursor_target, insert_query, rows)
 
-        if data_to_insert:
-            execute_values(cur, """
-                INSERT INTO realtimedata2 (datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2, speed)
-                VALUES %s
-                ON CONFLICT (datetime, vehicle_id) DO NOTHING;
-            """, data_to_insert)
-            conn.commit()
+            # Commit the transaction
+            conn_target.commit()
 
-        date = next_date
-        next_date = (datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y-%m-%d')
-        print(f"Date updated to: {date}")
-    
-    performanceEnd = time.time()
-    print("Time spended: ", performanceEnd - performanceStart)
-    cur.close()
-    conn.close()
+            print(f"Data for {start_datetime.date()} inserted successfully.")
+            start_datetime = start_datetime + timedelta(days=1)
+            end_datetime = end_datetime + timedelta(days=1)
+            if start_datetime.date() > datetime.today().date():
+                print("All data inserted successfully.")
+                break
+        except Exception as e:
+            print(f"Erro2: {e}")
 
-if __name__ == "__main__":
-    migrate_data()
+except Exception as e:
+    print(f"Error: {e}")
+finally:
+    # Close the cursors and connections
+    cursor_source.close()
+    cursor_target.close()
+    conn_source.close()
+    conn_target.close()
+
+
