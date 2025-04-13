@@ -1,10 +1,8 @@
 import os
 from dotenv import load_dotenv
-import psycopg2
 from psycopg2 import pool
-
 from psycopg2.extras import execute_values
-
+from geopy.distance import geodesic
 
 load_dotenv(dotenv_path="/home/tanel/Documents/public_transport_project/iaib/database/env.env")
 # Access the environment variables
@@ -32,6 +30,24 @@ def release_connection(conn):
     """Return a connection back to the pool."""
     pg_pool.putconn(conn)
 
+prev_locations = {}
+
+
+def calculate_speed(row, datetime):
+    global prev_locations
+    vehicle_id = row[6]
+    longitude = int(row[2]) / 1000000
+    latitude = int(row[3]) / 1000000
+    current_location = (latitude, longitude)
+    speed = -1 # default speed
+    if vehicle_id in prev_locations:
+        prev_location, prev_datetime = prev_locations[vehicle_id]
+        distance = geodesic(prev_location, current_location).meters
+        time_diff = (datetime - prev_datetime).total_seconds()
+        if 15 < time_diff < 45:
+            speed =  min(250, distance / time_diff * 3.6) # max speed 250 km/h
+    prev_locations[vehicle_id] = (current_location, datetime)
+    return speed
 
 def save_to_database(data, datetime):
     # Connect to PostgreSQL
@@ -66,7 +82,8 @@ def save_to_database(data, datetime):
                 destination_ = str(destination)
                 vehicle_id_ = int(vehicle_id)
                 unknown1_ = str(unknown1)
-                unknown2_ = int(unknown2)
+                unknown2_ = str(unknown2)
+                speed = int(calculate_speed(row, datetime))
             except ValueError:
                 print("Invalid record:",datetime, row, flush=True)
                 continue
@@ -87,11 +104,12 @@ def save_to_database(data, datetime):
                     geom,
                     unknown1_,
                     unknown2_,
+                    speed
                 )
             )
 
         insert_query = """
-            INSERT INTO realtimedata (datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2)
+            INSERT INTO realtimedata2 (datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2, speed)
             VALUES %s
             ON CONFLICT DO NOTHING;
         """

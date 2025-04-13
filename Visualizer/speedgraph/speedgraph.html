@@ -123,16 +123,37 @@
                 }
             }
         });
-        function loadRoute(line, vehicleType = "bus"){
+        function loadRoute(date, line, vehicleType = "bus"){
                         //const [vehicleType, lineNumber] = vehicle_id.split("_");
                         vehicleType = "bus";
                         const routeFileName = `${vehicleType}_${line}_routes.txt`;
                         
-                        fetch(`/transport_data/transport_data/routes_data/2025-03-10/${routeFileName}`)
+                        fetch(`/transport_data/transport_data/routes_data/${date}/${routeFileName}`)
                         .then((response) => response.text())
                         .then((routeData) => {
                             const route = routeData.split("\n")[1]; // Simplified: using second line
                             const routePoints = decodePolyline(route);
+                            // Calculate the total route length
+                            let totalDistance = 0;
+                            for (let i = 1; i < routePoints.length; i++) {
+                                const [lat1, lon1] = routePoints[i - 1];
+                                const [lat2, lon2] = routePoints[i];
+                                totalDistance += calculateDistance(lat1, lon1, lat2, lon2);
+                            }
+
+                            // Function to calculate distance between two coordinates using Haversine formula
+                            function calculateDistance(lat1, lon1, lat2, lon2) {
+                                const R = 6371; // Radius of the Earth in kilometers
+                                const dLat = (lat2 - lat1) * Math.PI / 180;
+                                const dLon = (lon2 - lon1) * Math.PI / 180;
+                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                                return R * c;
+                            }
+
+                            console.log(`Total route length: ${totalDistance.toFixed(2)} km`);
 
                             // Draw the route on the map
                             const polyline = L.polyline(routePoints, {
@@ -202,6 +223,7 @@
                     console.error("No data found for vehicle:", vehicle_id);
                     return;
                 }
+                console.log(`Data length: ${data.length}`);
 
                 // Extract speed and time data
                 const times = data.map(entry => entry.datetime);
@@ -285,11 +307,12 @@
         const line = urlParams.get('line') ?? "24"
         const type = urlParams.get('type') ?? "bus"
         const disableDepos = urlParams.get('disableDepos') ?? "true"
+        const date = startTime ? startTime.split(" ")[0] : "2025-03-10"
         fileSelect.options[0].innerHTML = vehicle_id;
 
         // Call the function to load the coordinates from the file
         loadCoordinates(vehicle_id, startTime, disableDepos);
-        loadRoute(line, type)
+        loadRoute(date, line, type)
     </script>
 </body>
 </html>

@@ -135,7 +135,7 @@ app.get("/speedsegments", async (req, res) => {
       query = `${speed_data}), ${segment_data} ${select_data};`;
     }
 
-    console.log(query);
+    //console.log(query);
     // Execute the query
     const result = await pool.query(query);
     res.json(result.rows);
@@ -180,7 +180,7 @@ app.get("/speedgraph", async (req, res) => {
       )`;
     }
     const query = `${select} ), ${calculatins}`;
-    console.log(query);
+    //console.log(query);
     const result = await pool.query(query);
     res.json(result.rows);
   }catch (err) {
@@ -188,6 +188,39 @@ app.get("/speedgraph", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+app.get("/gridspeeds", async (req, res) => {
+
+  const isValidRes = validateParams(req.query);
+  if (isValidRes !== "") {
+    console.log(isValidRes);
+    return res.status(400).json({ error: isValidRes });
+  }
+  /* const { vehicle_id, startTime, tws } = req.query;
+  if (!vehicle_id || !startTime) {
+    return res.status(400).send("vehicle_id and date are required");
+  }
+  if (!tws) {
+    tws = 15;
+  } */
+  try{
+    /* let endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + parseInt(tws));
+    endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset());
+    endTime = endTime.toISOString().slice(0, 19).replace("T", " "); */
+
+    let select = getQuery("gridspeeds", "grid_speeds.sql");
+    // select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}'`;
+    const query = `${select}`;
+    console.log(query);
+    const result = await pool.query(query);
+    res.json(result.rows);
+  }catch (err) {
+    console.error("Error querying the database:", err);
+    res.status(500).send("Internal Server Error");
+  }
+}
+);
 
 
 // Start the server

@@ -30,15 +30,7 @@ db_password = os.getenv("POSTGRES_PASSWORD")
 db_host = os.getenv("POSTGRES_HOST")
 db_port = os.getenv("POSTGRES_PORT")
 
-
-
-# Select distinct dates
-date = '2024-09-08'
-next_date = '2024-09-09'
-enddate = datetime.today().strftime('%Y-%m-%d')
-
-
-
+     
 # Database connection detail
 source_db_params = {
     'dbname': db_name,
@@ -54,8 +46,8 @@ target_db_params = {
     'host': db_host,
     'port': db_port
 }
-start_datetime = datetime.strptime("2024-07-11 00:00:00", "%Y-%m-%d %H:%M:%S")
-end_datetime = datetime.strptime("2024-07-12 00:00:00", "%Y-%m-%d %H:%M:%S")
+start_datetime = datetime.strptime("2025-03-28 00:00:00", "%Y-%m-%d %H:%M:%S")
+end_datetime = datetime.strptime("2025-03-29 00:00:00", "%Y-%m-%d %H:%M:%S")
 # Function to calculate speed and insert into the target database
     # Create a connection to the source and target databases
 conn_source = psycopg2.connect(**source_db_params)

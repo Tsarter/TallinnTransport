@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaflet Map with Grid Speeds</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+        background-color: #000; /* Make the map background dark */
+    }
+    .map-tiles {
+        filter: none; /* Keep the tile layer bright */
+    }
+</style>
+</head>
+<body>
+<h1>Grid Speeds Visualization</h1>
+<div id="map"></div>
+
+<script>
+// Create map
+var map = L.map('map').setView([59.437, 24.7535], 13); // Tallinn coordinates
+
+// Add OpenStreetMap tile layer
+L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  className: 'map-tiles'
+}).addTo(map);
+
+// Fetch data from the API
+async function fetchGridSpeeds() {
+    try {
+        const response = await fetch('/api/gridspeeds');
+        const data = await response.json();
+
+        // get average count for all grids
+        const avgCount = data.reduce((sum, item) => sum + parseInt(item.count), 0) / data.length;
+        data.forEach(item => {
+            
+            //console.log(item.grid_geom);
+            // Ensure grid_geom is a valid GeoJSON object
+            let geoJson;
+            if (typeof item.grid_geom === 'string') {
+                try {
+                    geoJson = JSON.parse(item.grid_geom); // Parse if it's a string
+                } catch (err) {
+                    console.error('Error parsing GeoJSON string:', item.grid_geom, err);
+                    return; // Skip this item if parsing fails
+                }
+            } else {
+                geoJson = item.grid_geom; // If it's already an object, use it directly
+            }
+
+            // Check if the GeoJSON object is valid and is a polygon
+            if (!geoJson || geoJson.type !== 'Polygon' || !geoJson.coordinates || !Array.isArray(geoJson.coordinates)) {
+                console.error('Invalid GeoJSON object:', geoJson);
+                return; // Skip this item if it's not a valid polygon
+            }
+            // Create a polygon for each grid and set its color based on avg_speed
+            var color = getColor(item.count,avgCount);
+            var layer = L.geoJSON(geoJson, {
+                style: function() {
+                    return {
+                        color: color,
+                        weight: 0,
+                        fillOpacity: 0.5
+                    };
+                }
+            }).addTo(map);
+            var roundedAvgSpeed = Math.round(item.avg_speed ); // Round to two decimal places
+            var timeLost = parseInt(item.count) * 30 /  550;
+            layer.bindPopup(`Average Speed: ${roundedAvgSpeed} km/h, measurments : ${item.count}, time spent > ${timeLost.toFixed(2)} s`);
+            // Add a marker for high measurement areas
+            // Uncomment the following lines to add markers for high measurement areas
+            if (false && item.count > 500) {
+                // Calculate the centroid of the polygon to place the marker
+                var centroid = calculateCentroid(geoJson.coordinates[0]);
+                if (centroid) {
+                    var marker = L.marker([centroid[1], centroid[0]]);
+                    marker.addTo(map).bindPopup(`High measurement area: ${item.count} measurements`);
+                }
+
+                // Function to calculate the centroid of a polygon
+                function calculateCentroid(coordinates) {
+                    var x = 0, y = 0, area = 0;
+
+                    for (var i = 0, len = coordinates.length - 1; i < len; i++) {
+                        var x0 = coordinates[i][0], y0 = coordinates[i][1];
+                        var x1 = coordinates[i + 1][0], y1 = coordinates[i + 1][1];
+                        var a = x0 * y1 - x1 * y0;
+                        x += (x0 + x1) * a;
+                        y += (y0 + y1) * a;
+                        area += a;
+                    }
+
+                    area *= 0.5;
+                    x /= (6 * area);
+                    y /= (6 * area);
+
+                    return [x, y];
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching grid speeds data:', error);
+    }
+}
+
+fetchGridSpeeds();
+
+// Function to get color based on average speed
+function getColor(avgSpeed, avgCount) {
+    // Normalize the speed to a value between 0 and 1
+    var normalizedSpeed = avgSpeed < 5 ? 0 : Math.max(0, Math.min(1, avgSpeed  / (avgCount * 2)));
+    
+    // Calculate the red, green, and blue components
+    var red, green;
+    if (normalizedSpeed < 0.5) {
+        // Transition from red to yellow
+        red = 255;
+        green = Math.round(510 * normalizedSpeed); // 0 to 255
+    } else {
+        // Transition from yellow to green
+        red = Math.round(255 * (1 - (normalizedSpeed - 0.5) * 2)); // 255 to 0
+        green = 255;
+    }
+    
+    // Return the color as a hex string
+    return `rgb(${green},${red},0)`;
+}
+
+</script>
+
+</body>
+</html>

@@ -11,6 +11,7 @@ CREATE TABLE realtimedata (
 	PRIMARY KEY (datetime, line, vehicle_id)
 );
 
+SELECT create_hypertable('realtimedata', 'datetime');
 
 CREATE TABLE realtimedata2 (
 	datetime timestamptz NOT NULL,
@@ -25,3 +26,13 @@ CREATE TABLE realtimedata2 (
 	speed int2 NULL,
 	PRIMARY KEY (datetime, vehicle_id)
 );
+
+SELECT create_hypertable('realtimedata2', 'datetime', , migrate_data => true);
+
+ALTER TABLE realtimedata2 SET (
+    timescaledb.compress,
+    timescaledb.compress_orderby = 'datetime ASC',
+    timescaledb.compress_segmentby = 'line, vehicle_id'
+);
+
+CALL add_columnstore_policy('realtimedata2', after => INTERVAL '7 days');
