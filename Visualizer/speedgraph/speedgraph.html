@@ -30,7 +30,6 @@
     <p>Counter: <span id="sliderValue">0</span></p>
     <select id="fileSelect">
         <option value="">Vali sõiduk</option>
-        <option value="bus_10_2417">bus_10_2417</option> <option value="bus_10_2441">bus_10_2441</option> 
 
     </select>
     <label for="timeWindowSize">Time Window Size (hours):</label>
@@ -123,9 +122,21 @@
                 }
             }
         });
+        // Function to calculate distance between two coordinates using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+                                const R = 6371; // Radius of the Earth in kilometers
+                                const dLat = (lat2 - lat1) * Math.PI / 180;
+                                const dLon = (lon2 - lon1) * Math.PI / 180;
+                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                                return R * c;
+                            }
+                        
         function loadRoute(date, line, vehicleType = "bus"){
                         //const [vehicleType, lineNumber] = vehicle_id.split("_");
-                        vehicleType = "bus";
+                        // vehicleType = "bus";
                         const routeFileName = `${vehicleType}_${line}_routes.txt`;
                         
                         fetch(`/transport_data/transport_data/routes_data/${date}/${routeFileName}`)
@@ -141,17 +152,7 @@
                                 totalDistance += calculateDistance(lat1, lon1, lat2, lon2);
                             }
 
-                            // Function to calculate distance between two coordinates using Haversine formula
-                            function calculateDistance(lat1, lon1, lat2, lon2) {
-                                const R = 6371; // Radius of the Earth in kilometers
-                                const dLat = (lat2 - lat1) * Math.PI / 180;
-                                const dLon = (lon2 - lon1) * Math.PI / 180;
-                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                                return R * c;
-                            }
+                        
 
                             console.log(`Total route length: ${totalDistance.toFixed(2)} km`);
 
@@ -211,11 +212,11 @@
 
 
         // Function to load coordinates and distances from a JSON file
-        async function loadCoordinates(vehicle_id, startTime, depotSpeeds) {
+        async function loadCoordinates(vehicle_id, startTime, depotSpeeds, line) {
             try {
                 const tws = document.getElementById('timeWindowSize').value; 
                 // const depotSpeeds = document.getElementById('depotSpeedsSelect').value;
-                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&startTime=${startTime}&tws=${tws}&disableDepos=${depotSpeeds}`); // Fetch data from API
+                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&line=${line}&startTime=${startTime}&tws=${tws}&disableDepos=${depotSpeeds}`); // Fetch data from API
                 const data = await response.json(); // Parse JSON response
 
                 // Filter data for the given vehicle_id
@@ -229,6 +230,31 @@
                 const times = data.map(entry => entry.datetime);
                 const speeds = data.map(entry => entry.speed_kmh);
 
+                let prevTime = new Date(times[0]);
+                // reduce total time
+                let totalTime = 0;
+                let totalDistance = 0;
+                for (let i = 1; i < data.length; i++) {
+                    const currentTime = new Date(data[i].datetime);
+                    const [lat1, lon1] = [data[i - 1].lat, data[i - 1].lon];
+                    const [lat2, lon2] = [data[i].lat, data[i].lon];
+
+                    // Skip time gaps larger than 2 minutes
+                    if ((currentTime - prevTime) / 1000 > 65) {
+                        console.log("skipping time " + prevTime.toLocaleTimeString('en-US', { hour12: false }) + " " + currentTime.toLocaleTimeString('en-US', { hour12: false }));
+                        prevTime = currentTime;
+                        continue;
+                    }
+
+                    totalTime += (currentTime - prevTime) / 1000; // in seconds
+                    totalDistance += calculateDistance(lat1, lon1, lat2, lon2) * 1000; // in meters
+                    prevTime = currentTime;
+                }
+                console.log('Totaltime:', totalTime);
+                console.log('Total distance:', totalDistance);
+                // Calculate average speed
+                const avgSpeed2 = (totalDistance / totalTime) * 3.6;
+
                 // Update the slider max value based on data length
                 slider.max = speeds.length - 1;
 
@@ -236,7 +262,12 @@
 
                 // Function to update the chart and slider display
                 function updateSpeedDisplay(index) {
-                    sliderValue.textContent = `Index: ${index}, Time: ${times[index]}, Speed: ${Math.round(speeds[index])} km/h`;
+                    // show in estonian timezone not UTC
+                    const date = new Date(times[index]);
+                    const options = { timeZone: 'Europe/Tallinn', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                    const timeString = date.toLocaleString('et-EE', options);
+               
+                    sliderValue.textContent = `Index: ${index}, Time: ${timeString}, Speed: ${speeds[index].toFixed(1)} km/h`;
                     highlightChartPoint(index);
                 }
                 let busMarker = L.marker([data[0]["lat"], data[0]["lon"]]).addTo(map);
@@ -244,7 +275,7 @@
                 // Function to update the bus position based on slider value
                 function updateBusPosition(index) {
                     busMarker.setLatLng([data[index]["lat"], data[index]["lon"]]);
-                    busMarker.bindPopup(`Speed: ${Math.round(speeds[index])} km/h`).openPopup();
+                    busMarker.bindPopup(`Speed: ${speeds[index].toFixed(1)} km/h`).openPopup();
                 }
 
                 // Event listener for the slider to update speed display
@@ -258,9 +289,9 @@
                 function populateSpeedChart() {
                     let prev_speed1 = 0, prev_speed2 = 0, prev_speed3 = 0;
                     let avgSpeed = 0;
-
+                
                     speeds.forEach((speedKmh, i) => {
-                        if (i === 0) return;
+                        //if (i === 0) return;
                         speedChart.data.labels.push(new Date(times[i]).toLocaleTimeString('en-US', { hour12: false }));
                         speedChart.data.datasets[0].data.push((speedKmh + prev_speed1 + prev_speed2 + prev_speed3) / 4);
                         speedChart.data.datasets[0].pointRadius.push(0);
@@ -270,9 +301,12 @@
                         prev_speed2 = prev_speed1;
                         prev_speed1 = speedKmh;
                         avgSpeed += speedKmh;
+                        
                     });
 
                     avgSpeed /= speeds.length;
+                    console.log(avgSpeed2);
+                    console.log(avgSpeed);
                     speedChart.data.datasets[1].data = Array(speeds.length).fill(avgSpeed);
                     speedChart.update();
         
@@ -311,7 +345,7 @@
         fileSelect.options[0].innerHTML = vehicle_id;
 
         // Call the function to load the coordinates from the file
-        loadCoordinates(vehicle_id, startTime, disableDepos);
+        loadCoordinates(vehicle_id, startTime, disableDepos, line);
         loadRoute(date, line, type)
     </script>
 </body>

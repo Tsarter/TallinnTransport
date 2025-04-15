@@ -109,7 +109,6 @@ app.get("/speedsegments", async (req, res) => {
     const startTime = `${date} ${startHour}:00:00`;
     
     let endTime = new Date(startTime);
-    console.log(endTime, endTime.getHours() + tws);
     endTime.setHours(endTime.getHours() + parseInt(tws));
     endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset());
     endTime = endTime.toISOString().slice(0, 19).replace("T", " ");
@@ -156,7 +155,7 @@ app.get("/speedgraph", async (req, res) => {
     console.log(isValidRes);
     return res.status(400).json({ error: isValidRes });
   }
-  const { vehicle_id, startTime, tws, disableDepos } = req.query;
+  const { vehicle_id, startTime, tws, disableDepos, line } = req.query;
   if (!vehicle_id || !startTime) {
     return res.status(400).send("vehicle_id and date are required");
   }
@@ -171,12 +170,12 @@ app.get("/speedgraph", async (req, res) => {
 
     let select = getQuery("speedgraph", "speedgraph.sql");
     let calculatins = getQuery("speedgraph", "speed_calculations.sql");
-    select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}'`;
+    select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}' AND line = '${line}'`;
     if (disableDepos === "true") {
       select += ` AND NOT EXISTS (
         SELECT 1
         FROM depos
-        WHERE ST_Within(geom::geometry, depos.location::geometry)
+        WHERE ST_Within(realtimedata2.geom::geometry, depos.location::geometry)
       )`;
     }
     const query = `${select} ), ${calculatins}`;
@@ -221,7 +220,17 @@ app.get("/gridspeeds", async (req, res) => {
   }
 }
 );
-
+app.get("/stops", async (req, res) => {
+  try{
+    let select = getQuery("stops", "stops.sql");
+    const query = `${select}`;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  }catch (err) {
+    console.error("Error querying the database:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
 
 // Start the server
 app.listen(port, () => {
