@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime
 import time
+import sys
 from config import (
     ROUTE_URL,
     ROUTE_DATA_DIR,
@@ -16,7 +17,9 @@ from config import (
     ANNOUNCEMENTS_DATA_DIR
 )
 from notify_discord import notify_discord
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
+from iaib.folder_saving.insert_routes_geom import insert_routes_geom
 def get_routes_data(data):
     rows = data.split("\n")
     current_type = ""
@@ -45,6 +48,7 @@ def fetch_route_data(type, nr):
         f"{ROUTE_DATA_DIR}/{today}/{type}_{nr}_routes.txt", "w", encoding="utf-8"
     ) as file:
         file.write(response.text)
+    
 
 
 def fetch_bus_times_data():
@@ -80,9 +84,11 @@ def fetch_daily_data():
             bus_time_data = fetch_bus_times_data()
             fetch_stops_data()
             get_routes_data(bus_time_data)
+            print("done")
         except Exception as e:
             print(e + str(datetime.now()))
         finally:
-            notify_discord()
+            #notify_discord()
+            insert_routes_geom()
 
 fetch_daily_data()

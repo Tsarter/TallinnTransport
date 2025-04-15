@@ -26,11 +26,17 @@
 // Create map
 var map = L.map('map').setView([59.437, 24.7535], 13); // Tallinn coordinates
 
-// Add OpenStreetMap tile layer
-L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png', {
+const mapURL = 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+const mapExtra = {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   className: 'map-tiles'
-}).addTo(map);
+}
+const mapURL2 = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+const mapExtra2 = {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+}
+// Add OpenStreetMap tile layer
+L.tileLayer(mapURL, mapExtra).addTo(map);
 
 // Fetch data from the API
 async function fetchGridSpeeds() {
@@ -39,7 +45,8 @@ async function fetchGridSpeeds() {
         const data = await response.json();
 
         // get average count for all grids
-        const avgCount = data.reduce((sum, item) => sum + parseInt(item.count), 0) / data.length;
+        //const avgCount = data.reduce((sum, item) => sum + parseInt(item.count), 0) / data.length;
+        const avgAvgSpeed = data.reduce((sum, item) => sum + parseFloat(item.avg_speed), 0) / data.length;
         data.forEach(item => {
             
             //console.log(item.grid_geom);
@@ -62,7 +69,7 @@ async function fetchGridSpeeds() {
                 return; // Skip this item if it's not a valid polygon
             }
             // Create a polygon for each grid and set its color based on avg_speed
-            var color = getColor(item.count,avgCount);
+            var color = getColor(item.avg_speed,avgAvgSpeed);
             var layer = L.geoJSON(geoJson, {
                 style: function() {
                     return {
@@ -73,8 +80,8 @@ async function fetchGridSpeeds() {
                 }
             }).addTo(map);
             var roundedAvgSpeed = Math.round(item.avg_speed ); // Round to two decimal places
-            var timeLost = parseInt(item.count) * 30 /  550;
-            layer.bindPopup(`Average Speed: ${roundedAvgSpeed} km/h, measurments : ${item.count}, time spent > ${timeLost.toFixed(2)} s`);
+           
+            layer.bindPopup(`Average Speed: ${roundedAvgSpeed} km/h, measurments : ${item.count}`);
             // Add a marker for high measurement areas
             // Uncomment the following lines to add markers for high measurement areas
             if (false && item.count > 500) {
@@ -110,13 +117,44 @@ async function fetchGridSpeeds() {
         console.error('Error fetching grid speeds data:', error);
     }
 }
+async function loadStops() {
+            try {
+            console.log("loading stops data");
+            const response = await fetch('/api/stops');
+            if (!response.ok) {
+                throw new Error('Failed to fetch stops data');
+            }
 
+            const stopsData = await response.json();
+            console.log("stops data: ", stopsData);
+
+            stopsData.forEach(stop => {
+                const { name, latitude, longitude } = stop;
+
+                // Add a small circle marker for each stop
+                L.circle([latitude, longitude], {
+                    radius: 7, // Radius in meters
+                    fillColor: 'lightblue',
+                    fillOpacity: 0.5,
+                    color: null // No border
+                })
+                .addTo(map)
+                .bindPopup(`Stop: ${name}`);
+            });
+
+            console.log("stops data loaded");
+            } catch (error) {
+            console.error('Error loading stops data:', error);
+            }
+        }
+
+        loadStops();
 fetchGridSpeeds();
 
 // Function to get color based on average speed
-function getColor(avgSpeed, avgCount) {
+function getColor(speed, avgSpeed) {
     // Normalize the speed to a value between 0 and 1
-    var normalizedSpeed = avgSpeed < 5 ? 0 : Math.max(0, Math.min(1, avgSpeed  / (avgCount * 2)));
+    var normalizedSpeed = speed < 5 ? 0 : Math.max(0, Math.min(1, speed  / (avgSpeed * 2)));
     
     // Calculate the red, green, and blue components
     var red, green;
@@ -131,7 +169,7 @@ function getColor(avgSpeed, avgCount) {
     }
     
     // Return the color as a hex string
-    return `rgb(${green},${red},0)`;
+    return `rgb(${red},${green},0)`;
 }
 
 </script>
