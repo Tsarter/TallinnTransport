@@ -76,8 +76,8 @@ func haversine(lat1, lon1, lat2, lon2 float64) float64 {
 		// Establish connection to the PostgreSQL database
 		_ = godotenv.Load("/home/tanel/Documents/public_transport_project/iaib/database/env.env")
 		db, err := sql.Open("pgx", fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-			os.Getenv("POSTGRES_USER"),
-			os.Getenv("POSTGRES_PASSWORD"),
+			os.Getenv("PG_TANEL_USER"),
+			os.Getenv("PG_TANEL_PASSWORD"),
 			os.Getenv("POSTGRES_HOST"),
 			os.Getenv("POSTGRES_PORT"),
 			os.Getenv("POSTGRES_DB"),

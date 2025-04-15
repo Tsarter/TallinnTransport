@@ -12,8 +12,8 @@ with open(config_path, "r") as config_file:
 # Database connection
 conn = psycopg2.connect(
     dbname=db_config["POSTGRES_DB"],
-    user=db_config["POSTGRES_USER"],
-    password=db_config["POSTGRES_PASSWORD"],
+    user=db_config["PG_TANEL_USER"],
+    password=db_config["PG_TANEL_PASSWORD"],
     host=db_config["POSTGRES_HOST"],
     port=db_config["POSTGRES_PORT"],
 )

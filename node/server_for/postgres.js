@@ -20,10 +20,10 @@ const port = 3000;
 
 // Configure the PostgreSQL connection
 const pool = new Pool({
-  user: process.env.POSTGRES_USER,
+  user: process.env.PG_TANEL_USER,
   host: process.env.POSTGRES_HOST,
   database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
+  password: process.env.PG_TANEL_PASSWORD,
   port: process.env.POSTGRES_PORT, // Default PostgreSQL port
 });
 

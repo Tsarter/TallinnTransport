@@ -14,6 +14,7 @@ from config import (
     INTERRUPTIONS_DATA_DIR,
     REALTIME_URL_TXT,
 )
+from iaib.folder_saving.notify_discord import notify_error_discord
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 print(os.getcwd())
@@ -41,6 +42,7 @@ def fetch_realtime_data(file_type="json", url=REALTIME_URL):
     except Exception as e:
         print(f"Error saving to database: {e}", flush=True)
         print(traceback.format_exc(), flush=True)
+        notify_error_discord(e)
 
 # Function to fetch the current interruptions data
 def fetch_interruptions():
@@ -108,13 +110,16 @@ def main():
         except requests.exceptions.RequestException as e:
             # Handle network-related errors
             print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Network error: {e}", flush=True)
+            notify_error_discord(e)
         except sqlite3.DatabaseError as e:
             # Handle database-related errors
             print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Database error: {e}", flush=True)
+            notify_error_discord(e)
         except Exception as e:
             # Catch-all for other exceptions
             print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Unexpected error: {e}", flush=True)
             print(traceback.format_exc(), flush=True)  # Print the full traceback for debugging
+            notify_error_discord(e)
 
 
         # Sleep for 30 seconds before fetching realtime data again
