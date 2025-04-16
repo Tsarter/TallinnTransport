@@ -61,8 +61,12 @@
 
         <label class="tooltip" for="disStops">Disable near stops <span class="tooltiptext">This will filter out all segments that are closer <br> than given number in meters to any stop </span> </label>
         <input type="text" id="disStops" name="disStops" placeholder="0m" title="Disable stops that are near each other">
+        <!-- <br><br>
+        <label  class="tooltip" for="ColorSlider">Speed color <span class="tooltiptext">Speeds below this value will be red and speeds above will be green. </span></label>
+        <input type="number" id="ColorSlider" min="0" max="30" value="15" step="5">
+        <span id="colorValue">15</span> km/h -->
         <br><br>
-        <button onclick="loadData()">Load Data</button> <p id="status"></p>
+        <button onclick="loadData()" id="loadData">Load Data</button> <p id="status"></p>
 
     </div>
 
@@ -77,10 +81,28 @@
         const speedLimit = document.getElementById('speedLimit');
         const typePicker = document.getElementById('typePicker');
         const disableStops = document.getElementById('disStops');
+        /* const colorSlider = document.getElementById('ColorSlider');
+        const colorValue = document.getElementById('colorValue'); */
+        
 
         hourSlider.oninput = function() {
             hourValue.textContent = this.value;
         }
+        /* colorSlider.onblur = async function() {
+            // check if value changed
+            if (this.value == colorValue.textContent) {
+                return;
+            }
+            const loadDataButton = document.getElementById('loadData');
+            // disable load data button and set state to loading
+            loadDataButton.disabled = true;
+            loadDataButton.textContent = "Loading...";
+
+            colorValue.textContent = this.value;
+            await loadData(true);
+            loadDataButton.disabled = false;
+            loadDataButton.textContent = "Load Data";
+        } */
 
         datePicker.oninput = function() {
             dateValue.textContent = this.value;
@@ -90,6 +112,25 @@
         }
 
         linePicker.oninput = function() {
+        }
+        function getColor(speed, avgSpeed = 10) {
+            // Normalize the speed to a value between 0 and 1
+            var normalizedSpeed = speed < 5 ? 0 : Math.max(0, Math.min(1, speed  / (avgSpeed * 2)));
+            
+            // Calculate the red, green, and blue components
+            var red, green;
+            if (normalizedSpeed < 0.5) {
+                // Transition from red to yellow
+                red = 255;
+                green = Math.round(510 * normalizedSpeed); // 0 to 255
+            } else {
+                // Transition from yellow to green
+                red = Math.round(255 * (1 - (normalizedSpeed - 0.5) * 2)); // 255 to 0
+                green = 255;
+            }
+            
+            // Return the color as a hex string
+            return `rgb(${red},${green},0)`;
         }
         // Initialize the Leaflet map
         const map = L.map('map').setView([59.437, 24.753], 12); // Centered at Tallinn, Estonia
@@ -106,16 +147,11 @@
                 3: "tram"
             };
             type = transportTypes[type] || type;
-            const startTime = dateValue.textContent + " 05:00:00";
+            const startTime = dateValue.textContent + " 04:00:00";
             window.open(`/speedgraph/speedgraph.html?line=${line}&type=${type}&vehicle_id=${vehicle_id}&startTime=${startTime}`, '_blank');
         }
-
-        // Fetch data from server and display on the map
-        async function loadData() {
-            const startTime = performance.now();
-            try {
-            console.log("loading data");
-            status.textContent = "Loading data...";
+        let data = [];
+        async function  fetchSpeedsegments() {
             const startHour = hourSlider.value;
             const tws = parseInt(timeWindowSize.value);
             const date = datePicker.value;
@@ -123,6 +159,8 @@
             const line = linePicker.value;
             const type = typePicker.value;
             const disStops = disableStops.value;
+
+            // Get params from url if they exist, missi
             
             let url = "/api/speedsegments?"
             url += `startHour=${startHour}`
@@ -132,6 +170,18 @@
             url += `&maxSpeed=${maxSpeed}`
             url += `&type=${type}`
             url += `&disStops=${disStops}`
+    
+            // Append parameters to the current URL
+            const currentUrl = new URL(window.location.href);
+            if (startHour !== "") currentUrl.searchParams.set('startHour', startHour);
+            if (tws !== "") currentUrl.searchParams.set('tws', tws);
+            if (date !== "") currentUrl.searchParams.set('date', date);
+            if (line !== "") currentUrl.searchParams.set('line', line);
+            if (maxSpeed !== "") currentUrl.searchParams.set('maxSpeed', maxSpeed);
+            if (type !== "") currentUrl.searchParams.set('type', type);
+            if (disStops !== "") currentUrl.searchParams.set('disStops', disStops);
+            window.history.replaceState(null, '', currentUrl);
+
 
             const response = await fetch(url);
             console.log("response got");
@@ -143,8 +193,22 @@
                 throw new Error('Failed to fetch data');
             }
 
-            const data = await response.json();
-            console.log("data: ", data);
+            data = await response.json();
+            return;
+        }
+        // Fetch data from server and display on the map
+        async function loadData(useCache) {
+            const startTime = performance.now();
+            try {
+            console.log("loading data");
+            status.textContent = "Loading data...";
+            
+            if (data.length === 0 || !useCache) {
+                await fetchSpeedsegments();
+            } else {
+                console.log("Using cached data");
+            }
+            //console.log("data: ", data);
             status.textContent = `Loaded ${data.length} points`;
 
             // Clear existing layers
@@ -161,8 +225,9 @@
                 const geojson = JSON.parse(segment);
 
                 // Determine color based on speed
-                const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
-                console.log("zoom", map.getZoom());
+                //const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
+                const color = getColor(speed_kmh, 10);
+                //console.log("zoom", map.getZoom());
                 // Add the GeoJSON as a layer
                 L.geoJSON(geojson, {
                 style: {
@@ -218,9 +283,28 @@
             console.error('Error loading stops data:', error);
             }
         }
+        function loadParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const startHour = urlParams.get('startHour');
+            const tws = urlParams.get('tws');
+            const date = urlParams.get('date');
+            const line = urlParams.get('line');
+            const maxSpeed = urlParams.get('maxSpeed');
+            const type = urlParams.get('type');
+            const disStops = urlParams.get('disStops');
 
+            if (startHour) hourSlider.value = startHour;
+            if (tws) timeWindowSize.value = tws;
+            if (date) datePicker.value = date;
+            if (line) linePicker.value = line;
+            if (maxSpeed) speedLimit.value = maxSpeed;
+            if (type) typePicker.value = type;
+            if (disStops) disableStops.value = disStops;
+        }
+
+        loadParams();
         loadStops();
-        loadData();
+        loadData(false);
     </script>
 
 <style>
