@@ -69,7 +69,8 @@ async function fetchGridSpeeds() {
                 return; // Skip this item if it's not a valid polygon
             }
             // Create a polygon for each grid and set its color based on avg_speed
-            var color = getColor(item.avg_speed,avgAvgSpeed);
+            // var color = getColor(item.avg_speed,avgAvgSpeed);
+            var color = getColor(item.avg_speed,10);
             var layer = L.geoJSON(geoJson, {
                 style: function() {
                     return {

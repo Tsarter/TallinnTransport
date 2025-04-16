@@ -13,8 +13,8 @@ sqlite_cursor = sqlite_conn.cursor()
 load_dotenv(dotenv_path="iaib/database/env.env")
 # Access the environment variables
 db_name = os.getenv("POSTGRES_DB")
-db_user = os.getenv("POSTGRES_USER")
-db_password = os.getenv("POSTGRES_PASSWORD")
+db_user = os.getenv("PG_TANEL_USER")
+db_password = os.getenv("PG_TANEL_PASSWORD")
 db_host = os.getenv("POSTGRES_HOST")
 db_port = os.getenv("POSTGRES_PORT")
 # Connect to PostgreSQL

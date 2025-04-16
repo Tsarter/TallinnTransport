@@ -114,8 +114,8 @@ app.get("/speedsegments", async (req, res) => {
     endTime = endTime.toISOString().slice(0, 19).replace("T", " ");
     // Add the last line dynamically
     speed_data += `datetime BETWEEN '${startTime}' AND  '${endTime}' `;
-    speed_data += line ? ` AND line = '${line}'` : '';
-    speed_data += type ? ` AND type = ${type}` : '';
+    speed_data += line ? ` AND line = '${line}' ` : '';
+    speed_data += type ? ` AND type = ${type} ` : '';
     speed_data += `AND NOT EXISTS (
       SELECT 1
       FROM depos
@@ -179,7 +179,7 @@ app.get("/speedgraph", async (req, res) => {
       )`;
     }
     const query = `${select} ), ${calculatins}`;
-    //console.log(query);
+    console.log(query);
     const result = await pool.query(query);
     res.json(result.rows);
   }catch (err) {

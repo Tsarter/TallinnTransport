@@ -4,3 +4,4 @@ proxy
 *.pyc
 *.csv
 *.env
+*.log

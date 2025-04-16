@@ -26,7 +26,11 @@
     <h1>Vehicle Speed Visualization</h1>
        
     <div id="map"></div>
-    <input type="range" id="slider" min="0" max="0" value="0" step="1">
+    <div>
+        <button id="decreaseSlider">-</button>
+        <input type="range" id="slider" min="0" max="0" value="0" step="1">
+        <button id="increaseSlider">+</button>
+    </div>
     <p>Counter: <span id="sliderValue">0</span></p>
     <select id="fileSelect">
         <option value="">Vali sõiduk</option>
@@ -68,6 +72,23 @@
         // Get references to the slider and the display for the current value
         const slider = document.getElementById('slider');
         const sliderValue = document.getElementById('sliderValue');
+
+        const decreaseButton = document.getElementById('decreaseSlider');
+        const increaseButton = document.getElementById('increaseSlider');
+
+        decreaseButton.addEventListener('click', () => {
+            if (slider.value > 0) {
+                slider.value = parseInt(slider.value) - 1;
+                slider.dispatchEvent(new Event('input')); // Trigger input event
+            }
+        });
+
+        increaseButton.addEventListener('click', () => {
+            
+            slider.value = parseInt(slider.value) + 1;
+            slider.dispatchEvent(new Event('input')); // Trigger input event
+            
+        });
 
         // Fileselect
         const fileSelect = document.getElementById('fileSelect');
@@ -257,7 +278,7 @@
 
                 // Update the slider max value based on data length
                 slider.max = speeds.length - 1;
-
+     
                 let index = 0;
 
                 // Function to update the chart and slider display

@@ -12,13 +12,15 @@ from shapely.geometry import LineString, Point
 from shapely.ops import transform
 from pyproj import Transformer
 
+
 # Constants
 BASE_DIR = "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data/routes_data"
 TRANSPORT_TYPE_MAP = {'bus': 2, 'tram': 3, 'trol': 1}
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv(dotenv_path="iaib/database/env.env")
+
+load_dotenv(dotenv_path="/home/tanel/Documents/public_transport_project/iaib/database/env.env")
 
 # Access the environment variables
 db_name = os.getenv("POSTGRES_DB")
@@ -26,6 +28,11 @@ db_user = os.getenv("PG_TANEL_USER")
 db_password = os.getenv("PG_TANEL_PASSWORD")
 db_host = os.getenv("POSTGRES_HOST")
 db_port = os.getenv("POSTGRES_PORT")
+print("DB:", db_name)
+print("USER:", db_user)
+print("PASS:", db_password)
+print("HOST:", db_host)
+print("PORT:", db_port)
 
 # Database connection settings
 DB_CONFIG = {
@@ -64,7 +71,8 @@ def compute_buffers(geom):
 def parse_file(filepath, day, transport_type, transport_line):
     with open(filepath, "r", encoding="utf-8") as f:
         lines = f.read().strip().split("\n")
-    
+    # Make 18a -> 18A
+    transport_line = transport_line.upper()
     # if file contains "<!DOCTYPE then it is not a valid file
     if lines[0].startswith("<"):
         return []

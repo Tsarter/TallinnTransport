@@ -61,10 +61,7 @@
 
         <label class="tooltip" for="disStops">Disable near stops <span class="tooltiptext">This will filter out all segments that are closer <br> than given number in meters to any stop </span> </label>
         <input type="text" id="disStops" name="disStops" placeholder="0m" title="Disable stops that are near each other">
-        <!-- <br><br>
-        <label  class="tooltip" for="ColorSlider">Speed color <span class="tooltiptext">Speeds below this value will be red and speeds above will be green. </span></label>
-        <input type="number" id="ColorSlider" min="0" max="30" value="15" step="5">
-        <span id="colorValue">15</span> km/h -->
+
         <br><br>
         <button onclick="loadData()" id="loadData">Load Data</button> <p id="status"></p>
 
@@ -81,28 +78,12 @@
         const speedLimit = document.getElementById('speedLimit');
         const typePicker = document.getElementById('typePicker');
         const disableStops = document.getElementById('disStops');
-        /* const colorSlider = document.getElementById('ColorSlider');
-        const colorValue = document.getElementById('colorValue'); */
-        
+
 
         hourSlider.oninput = function() {
             hourValue.textContent = this.value;
         }
-        /* colorSlider.onblur = async function() {
-            // check if value changed
-            if (this.value == colorValue.textContent) {
-                return;
-            }
-            const loadDataButton = document.getElementById('loadData');
-            // disable load data button and set state to loading
-            loadDataButton.disabled = true;
-            loadDataButton.textContent = "Loading...";
 
-            colorValue.textContent = this.value;
-            await loadData(true);
-            loadDataButton.disabled = false;
-            loadDataButton.textContent = "Load Data";
-        } */
 
         datePicker.oninput = function() {
             dateValue.textContent = this.value;
