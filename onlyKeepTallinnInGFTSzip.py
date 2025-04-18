@@ -20,6 +20,24 @@ def filter_gtfs_by_agency(zip_path, target_agency_id, output_zip_path):
         shapes = (
             pd.read_csv(shapes_path) if os.path.exists(shapes_path) else pd.DataFrame()
         )
+        fare_rules_path = os.path.join(tmpdir, "fare_rules.txt")
+        fare_rules = (
+            pd.read_csv(fare_rules_path)
+            if os.path.exists(fare_rules_path)
+            else pd.DataFrame()
+        )
+        calendar_dates_path = os.path.join(tmpdir, "calendar_dates.txt")
+        calendar_dates = (
+            pd.read_csv(calendar_dates_path)
+            if os.path.exists(calendar_dates_path)
+            else pd.DataFrame()
+        )
+        calendar_path = os.path.join(tmpdir, "calendar.txt")
+        calendar = (
+            pd.read_csv(calendar_path)
+            if os.path.exists(calendar_path)
+            else pd.DataFrame()
+        )
 
         # Filter agency
         agency_filtered = agency[agency["agency_id"] == target_agency_id]
@@ -46,6 +64,28 @@ def filter_gtfs_by_agency(zip_path, target_agency_id, output_zip_path):
         else:
             shapes_filtered = pd.DataFrame()
 
+        # Filter fare_rules by route_id
+        if not fare_rules.empty and "route_id" in fare_rules.columns:
+            fare_rules_filtered = fare_rules[fare_rules["route_id"].isin(route_ids)]
+        else:
+            fare_rules_filtered = pd.DataFrame()
+
+        # Filter calendar_dates by service_id used in filtered trips
+        if not calendar_dates.empty and "service_id" in calendar_dates.columns:
+            service_ids = set(trips_filtered["service_id"].dropna())
+            calendar_dates_filtered = calendar_dates[
+                calendar_dates["service_id"].isin(service_ids)
+            ]
+        else:
+            calendar_dates_filtered = pd.DataFrame()
+
+        # Filter calendar by service_id used in filtered trips
+        if not calendar.empty and "service_id" in calendar.columns:
+            service_ids = set(trips_filtered["service_id"].dropna())
+            calendar_filtered = calendar[calendar["service_id"].isin(service_ids)]
+        else:
+            calendar_filtered = pd.DataFrame()
+
         # Output directory
         filtered_dir = os.path.join(tmpdir, "filtered")
         os.makedirs(filtered_dir)
@@ -62,14 +102,22 @@ def filter_gtfs_by_agency(zip_path, target_agency_id, output_zip_path):
             shapes_filtered.to_csv(
                 os.path.join(filtered_dir, "shapes.txt"), index=False
             )
+        if not fare_rules_filtered.empty:
+            fare_rules_filtered.to_csv(
+                os.path.join(filtered_dir, "fare_rules.txt"), index=False
+            )
+        if not calendar_dates_filtered.empty:
+            calendar_dates_filtered.to_csv(
+                os.path.join(filtered_dir, "calendar_dates.txt"), index=False
+            )
+        if not calendar_filtered.empty:
+            calendar_filtered.to_csv(
+                os.path.join(filtered_dir, "calendar.txt"), index=False
+            )
 
         # Optionally copy other GTFS files if needed
         optional_files = [
-            "calendar.txt",
-            "calendar_dates.txt",
             "fare_attributes.txt",
-            "fare_rules.txt",
-            "frequencies.txt",
         ]
         for fname in optional_files:
             src = os.path.join(tmpdir, fname)
@@ -90,5 +138,5 @@ def filter_gtfs_by_agency(zip_path, target_agency_id, output_zip_path):
 filter_gtfs_by_agency(
     "C:/Users/Tanel/Downloads/gtfs1.zip",
     56,
-    "C:/Users/Tanel/Downloads/GTFS_filtered5.zip",
+    "C:/Users/Tanel/Downloads/GTFS_filtered6.zip",
 )
