@@ -60,6 +60,7 @@ def main_error(error):
         "content": f"""Error: {error} \n
         """
     }
+
     response = requests.post(DISCORD_WEBHOOK_URL, json=message)
     if response.status_code != 204:
         print(f"Failed to send message to Discord: {response.status_code}, {response.text}")
@@ -67,5 +68,5 @@ def main_error(error):
 def notify_discord():
     main()
 
-def notify_error_discord(error):
+def notify_error_discord(error=""):
     main_error(error)

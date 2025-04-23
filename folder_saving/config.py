@@ -31,3 +31,9 @@ INTERRUPTIONS_DATA_DIR = DATA_DIR + "/interruptions_data"
 # Announcements Data
 ANNOUNCEMENTS_URL = "https://transport.tallinn.ee/announcements.json"
 ANNOUNCEMENTS_DATA_DIR = DATA_DIR + "/announcements_data"
+
+# GFTS Data
+GTFS_URL = "https://transport.tallinn.ee/data/gtfs.zip"
+GFTS_URL = "https://peatus.ee/gtfs/gtfs.zip"
+GTFS_DATA_DIR = DATA_DIR + "/GTFS_data"
+GFTS_TALLINNA_LINNATRANSPORDI_AS_ID = "56"

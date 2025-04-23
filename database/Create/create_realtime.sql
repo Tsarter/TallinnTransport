@@ -36,3 +36,5 @@ ALTER TABLE realtimedata2 SET (
 );
 
 CALL add_columnstore_policy('realtimedata2', after => INTERVAL '7 days');
+
+ALTER TABLE realtimedata2 RENAME TO realtimedata;

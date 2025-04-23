@@ -32,7 +32,8 @@ function getQuery(type, filename) {
 }
   
 function validateParams(query) {
-  const { type, line, date, startHour, tws,maxSpeed, disStops, vehicle_id, datetime } = query;
+  const { type, line, date, startHour, tws,maxSpeed, disStops, vehicle_id, datetime,
+    lat1, lon1, lat2, lon2} = query;
   
   // Validate that date is in YYYY-MM-DD
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -68,16 +69,23 @@ function validateParams(query) {
   }
 
   if (type && !["","1","2","3"].includes(type)) {
-    return "Type must be empty 1, 2 or 3";
+    return "Type must be empty, 1, 2 or 3";
   }
 
   if (disStops && (!Number.isInteger(Number(disStops)) || Number(disStops) > 1000)) {
-    return "filter stops must be an integer"
+    return "filter stops is wrong"
   }
 
   if (vehicle_id && !Number.isInteger(Number(vehicle_id))) {
-    return "vehicle_id must be an integer";
+    return "vehicle_id is wrong";
   }
+
+  // longitude and latitude must be in the format 1.234567
+  for (const location in [lat1, lon1, lat2, lon2]) {
+    if (location && !/^-?\d+(\.\d+)?$/.test(location)) {
+    return "Location is wrong";
+  }}
+
 
   return "";
 }
@@ -175,7 +183,7 @@ app.get("/speedgraph", async (req, res) => {
       select += ` AND NOT EXISTS (
         SELECT 1
         FROM depos
-        WHERE ST_Within(realtimedata2.geom::geometry, depos.location::geometry)
+        WHERE ST_Within(realtimedata.geom::geometry, depos.location::geometry)
       )`;
     }
     const query = `${select} ), ${calculatins}`;
@@ -231,6 +239,35 @@ app.get("/stops", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+
+app.get("/loc_to_loc", async (req, res) => {
+  try{
+    const isValidRes = validateParams(req.query);
+    if (isValidRes !== "") {
+      console.log(isValidRes);
+      return res.status(400).json({ error: isValidRes });
+    }
+    const { lat1, lon1, lat2, lon2 } = req.query;
+    if (!lat1 || !lon1 || !lat2 || !lon2) {
+      return res.status(400).send("lat1, lon1, lat2 and lon2 are required");
+    }
+    let points = `WITH point_a AS (
+        SELECT ST_SetSRID(ST_MakePoint(${lon1},${lat1} ), 4326)::geography AS geom
+      ),
+      point_b AS (
+        SELECT ST_SetSRID(ST_MakePoint(${lon2},${lat2}), 4326)::geography AS geom
+      )`
+    let select = getQuery("loc_to_loc", "loc_to_loc.sql");
+    const query = `${points} ${select}`;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  }catch (err) {
+    console.error("Error querying the database:", err);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
 
 // Start the server
 app.listen(port, () => {

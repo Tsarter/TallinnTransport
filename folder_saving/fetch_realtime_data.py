@@ -14,10 +14,10 @@ from config import (
     INTERRUPTIONS_DATA_DIR,
     REALTIME_URL_TXT,
 )
-from iaib.folder_saving.notify_discord import notify_error_discord
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 print(os.getcwd())
+from iaib.folder_saving.notify_discord import notify_error_discord
 from iaib.folder_saving.data_to_timescaledb import save_to_database
 
 

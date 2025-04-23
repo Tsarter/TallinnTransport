@@ -28,11 +28,6 @@ db_user = os.getenv("PG_TANEL_USER")
 db_password = os.getenv("PG_TANEL_PASSWORD")
 db_host = os.getenv("POSTGRES_HOST")
 db_port = os.getenv("POSTGRES_PORT")
-print("DB:", db_name)
-print("USER:", db_user)
-print("PASS:", db_password)
-print("HOST:", db_host)
-print("PORT:", db_port)
 
 # Database connection settings
 DB_CONFIG = {

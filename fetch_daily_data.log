@@ -1,11 +1,2 @@
-Traceback (most recent call last):
-  File "/home/tanel/Documents/public_transport_project/iaib/folder_saving/fetch_daily_data.py", line 22, in <module>
-    from iaib.folder_saving.insert_routes_geom import insert_routes_geom
-  File "/home/tanel/Documents/public_transport_project/iaib/folder_saving/insert_routes_geom.py", line 39, in <module>
-    conn = psycopg2.connect(**DB_CONFIG)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3/dist-packages/psycopg2/__init__.py", line 122, in connect
-    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-psycopg2.OperationalError: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "tanel" does not exist
-
+done
+Inserted routes for today's folder 2025-04-23 into the database.

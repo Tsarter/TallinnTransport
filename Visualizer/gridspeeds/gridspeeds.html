@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/leaflet-ajax@2.1.0/dist/leaflet.ajax.min.js"></script>
 <style>
     #map {
-        height: 600px;
+        height: 90vh;
         width: 100%;
         background-color: #000; /* Make the map background dark */
     }
@@ -70,7 +70,7 @@ async function fetchGridSpeeds() {
             }
             // Create a polygon for each grid and set its color based on avg_speed
             // var color = getColor(item.avg_speed,avgAvgSpeed);
-            var color = getColor(item.avg_speed,10);
+            var color = getColor(item.avg_speed,20);
             var layer = L.geoJSON(geoJson, {
                 style: function() {
                     return {

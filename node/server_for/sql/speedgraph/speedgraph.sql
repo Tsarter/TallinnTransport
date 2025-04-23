@@ -7,4 +7,4 @@ WITH vehicle_movements AS (
         type,
         LEAD(datetime) OVER (PARTITION BY vehicle_id ORDER BY datetime) AS next_datetime,
         LEAD(geom) OVER (PARTITION BY vehicle_id ORDER BY datetime) AS next_geom
-    FROM realtimedata2 where 
+    FROM realtimedata where 

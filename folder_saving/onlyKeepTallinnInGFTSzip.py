@@ -1,17 +1,36 @@
+"""
+
+IMPORTANT!!!
+
+This file is redundant. Its not needed bc gtfs can be directly downloaded fromt transport.tallinn.ee
+no need for whole Estonia and then filter like this file does.
+"""
+
 import zipfile
 import pandas as pd
 import os
 import tempfile
 import shutil
+import io
 
-
-def filter_gtfs_by_agency(zip_path, target_agency_id, output_zip_path):
+def filter_gtfs_by_agency(zipFile, target_agency_id, output_zip_path):
+    
     with tempfile.TemporaryDirectory() as tmpdir:
-        with zipfile.ZipFile(zip_path, "r") as z:
-            z.extractall(tmpdir)
+        # Handle bytes input by wrapping it in a BytesIO object
+        if isinstance(zipFile, bytes):
+            zipFile = io.BytesIO(zipFile)
+
+        # Unzip the GTFS file
+        with zipfile.ZipFile(zipFile, "r") as zip_ref:
+            zip_ref.extractall(tmpdir)
 
         # Read required GTFS files
-        agency = pd.read_csv(os.path.join(tmpdir, "agency.txt"))
+        agency_path = os.path.join(tmpdir, "agency.txt")
+        if not os.path.exists(agency_path):
+            raise FileNotFoundError("agency.txt not found in the extracted files.")
+        agency = pd.read_csv(agency_path)
+        if "agency_id" not in agency.columns:
+            raise KeyError("'agency_id' column not found in agency.txt.")
         routes = pd.read_csv(os.path.join(tmpdir, "routes.txt"))
         trips = pd.read_csv(os.path.join(tmpdir, "trips.txt"))
         stop_times = pd.read_csv(os.path.join(tmpdir, "stop_times.txt"))
@@ -135,8 +154,9 @@ def filter_gtfs_by_agency(zip_path, target_agency_id, output_zip_path):
 
 
 # Example usage
-filter_gtfs_by_agency(
+""" filter_gtfs_by_agency(
     "C:/Users/Tanel/Downloads/gtfs1.zip",
     56,
     "C:/Users/Tanel/Downloads/GTFS_filtered6.zip",
 )
+ """

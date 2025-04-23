@@ -109,7 +109,7 @@ def save_to_database(data, datetime):
             )
 
         insert_query = """
-            INSERT INTO realtimedata2 (datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2, speed)
+            INSERT INTO realtimedata (datetime, type, line, vehicle_id, direction, destination, geom, unknown1, unknown2, speed)
             VALUES %s
             ON CONFLICT DO NOTHING;
         """

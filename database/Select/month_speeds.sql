@@ -18,7 +18,7 @@ WITH vehicle_movements AS (
         datetime
     ) AS next_geom
   FROM
-    realtimedata2
+    realtimedata
   WHERE
     --vehicle_id = '535'
     datetime >= '2025-03-01'
@@ -33,7 +33,7 @@ WITH vehicle_movements AS (
         depos
       WHERE
         ST_Within(
-          realtimedata2.geom :: geometry,
+          realtimedata.geom :: geometry,
           depos.location :: geometry
         )
     )
