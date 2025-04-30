@@ -31,6 +31,10 @@ for date in os.listdir(base_folder):
         all_features = []
         i = 0
 
+
+        # performance meas start
+        time_start = datetime.now()
+
         # Loop through all JSON files in the current date folder
         for filename in sorted(os.listdir(folder)):
             i += 1
@@ -58,6 +62,9 @@ for date in os.listdir(base_folder):
         # Combine into a single GeoJSON structure for the current date
         output = {"type": "FeatureCollection", "features": all_features}
 
+        # performance meas middle
+        time_middle = datetime.now()
+
         # Save to a new file in the output directory for the current date
         try:
             # GZIP COMPRESSES REAL GOOD. Like 150mb -> to 15mb
@@ -66,3 +73,10 @@ for date in os.listdir(base_folder):
             # print(f"Data zipped and saved")
         except Exception as e:
             print(f"Error saving combined data for date {date}: {e}")
+
+        # performance meas end
+        time_end = datetime.now()
+        print(f"Processing for date {date} completed.")
+        print(f"Time taken to process files: {time_middle - time_start}")
+        print(f"Time taken to save combined data: {time_end - time_middle}")
+        print(f"Total time taken for date {date}: {time_end - time_start}")
