@@ -260,6 +260,7 @@ app.get("/loc_to_loc", async (req, res) => {
       )`
     let select = getQuery("loc_to_loc", "loc_to_loc.sql");
     const query = `${points} ${select}`;
+    console.log(query);
     const result = await pool.query(query);
     res.json(result.rows);
   }catch (err) {
