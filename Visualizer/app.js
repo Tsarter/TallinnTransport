@@ -13,7 +13,7 @@ let liveDataInterval; // To store the live data interval
 let isLiveData = false; 
 
 const urlParams = new URLSearchParams(window.location.search);
-const dateParam = urlParams.get('date') ?? "2024-08-22"
+const dateParam = urlParams.get('date') ?? "2025-03-12"
 const speedParam = urlParams.get('speed') ?? 1000;
 
 document.getElementById('datePicker').value = dateParam

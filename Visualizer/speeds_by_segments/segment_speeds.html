@@ -286,7 +286,7 @@
                 3: "tram"
             };
             type = transportTypes[type] || type;
-            const startTime = datePicker.value + " " + hourSlider.value + ":00:00";
+            const startTime = datePicker.value + " 00:00:00";
             window.open(`/speedgraph/speedgraph.html?line=${line}&type=${type}&vehicle_id=${vehicle_id}&startTime=${startTime}`, '_blank');
         }
         let data = [];
