@@ -24,10 +24,11 @@
         <input type="text" id="location2" placeholder="Click on map" readonly>
         <br><br>
         <button onclick="loadLocations()">Load Locations</button>
+        <p id="status"></p>
     </div>
     <div id="popover-container" style="display:none; position: absolute; top: 150px; right: 10px; z-index: 1001; background: #f9f9f9; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; width: 400px;">
         <h4>Trip Segment Times</h4>
-        <button onclick="document.getElementById('popover-container').style.display='none'" style="margin-top: 10px;">Close</button>
+        <button onclick="document.getElementById('popover-container').style.display='none'" style="margin-top: 30px;">Close</button>
         <div id="popover-content"></div>
     </div>
 
@@ -36,27 +37,39 @@
 
         async function loadLocations() {
             if (!location1Marker || !location2Marker) {
-                alert('Please select both locations on the map.');
-                return;
+            alert('Please select both locations on the map.');
+            return;
             }
             const location1 = document.getElementById('location1').value;
             const location2 = document.getElementById('location2').value;
             console.log('Loading data for locations:', location1, location2);
-            // Add your logic to handle the selected locations
+
             const lat1 = location1.split(',')[0].trim();
             const lon1 = location1.split(',')[1].trim();
             const lat2 = location2.split(',')[0].trim();
             const lon2 = location2.split(',')[1].trim();
             const url = `/api/loc_to_loc?lat1=${lat1}&lon1=${lon1}&lat2=${lat2}&lon2=${lon2}`;
+
+            document.getElementById('status').textContent = 'Loading data... (up to 30 seconds)';
+            const startTime = performance.now();
+            try {
             const response = await fetch(url);
-            console.log("response got");
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
             }
             const data = await response.json();
             console.log("data: ", data);
-            showPopover(data);
 
+            showGeomsOnMap(data);
+            showPopover(data);
+            } catch (error) {
+            console.error('Error loading data:', error);
+            document.getElementById('status').textContent = 'Error loading data.';
+            return;
+            }
+            const endTime = performance.now();
+            const duration = ((endTime - startTime) / 1000).toFixed(1);
+            document.getElementById('status').textContent = `Data loading took ${duration} seconds.`;
         }
         
     function showPopover(data) {
@@ -172,7 +185,7 @@
             return div;
         };
 
-        legend.addTo(map);
+        // legend.addTo(map);
 
         map.on('click', function (e) {
             if (!location1Marker) {
@@ -202,65 +215,13 @@
             const startTime = datePicker.value + " " + hourSlider.value + ":00:00";
             window.open(`/speedgraph/speedgraph.html?line=${line}&type=${type}&vehicle_id=${vehicle_id}&startTime=${startTime}`, '_blank');
         }
-        let data = [];
-        async function  fetchSpeedsegments() {
-            const startHour = hourSlider.value;
-            const tws = parseInt(timeWindowSize.value);
-            const date = datePicker.value;
-            const maxSpeed = speedLimit.value;
-            const line = linePicker.value;
-            const type = typePicker.value;
-            const disStops = disableStops.value;
-
-            // Get params from url if they exist, missi
-            
-            let url = "/api/speedsegments?"
-            url += `startHour=${startHour}`
-            url += `&tws=${tws}`
-            url += `&date=${date}`
-            url += `&line=${line}`
-            url += `&maxSpeed=${maxSpeed}`
-            url += `&type=${type}`
-            url += `&disStops=${disStops}`
-    
-
-
-
-            const response = await fetch(url);
-            console.log("response got");
-            if (response.status === 400) {
-                let data = await response.json();
-                throw new Error(data.error);
-            }
-            if (!response.ok) {
-                throw new Error('Failed to fetch data');
-            }
-
-            data = await response.json();
-            // Append parameters to the current URL
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('startHour', startHour);
-            currentUrl.searchParams.set('tws', tws);
-            currentUrl.searchParams.set('date', date);
-            currentUrl.searchParams.set('line', line);
-            currentUrl.searchParams.set('maxSpeed', maxSpeed);
-            currentUrl.searchParams.set('type', type);
-            currentUrl.searchParams.set('disStops', disStops);
-            window.history.replaceState(null, '', currentUrl);
-            return;
-        }
+        
         // Fetch data from server and display on the map
-        async function loadData(useCache) {
+        async function showGeomsOnMap(data) {
             const startTime = performance.now();
             try {
             console.log("loading data");
             status.textContent = "Loading data...";
-            
-            if (data.length === 0 || !useCache) {
-                await fetchSpeedsegments();
-            } else {
-                console.log("Using cached data");
-            }
             //console.log("data: ", data);
             status.textContent = `Loaded ${data.length} points`;
 
@@ -272,39 +233,57 @@
             });
 
             data.forEach(row => {
-                const {line, segment, speed_kmh, vehicle_id, type } = row;
+                const {line, geom_line_geojson, vehicle_id, type, direction } = row;
 
                 // Parse GeoJSON directly
-                const geojson = JSON.parse(segment);
+                const geojson = JSON.parse(geom_line_geojson);
 
                 // Determine color based on speed
-                //const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
-                const color = getColor(speed_kmh);
-                //console.log("zoom", map.getZoom());
+           
+                //const color = getColor(speed_kmh);
+                // Generate a unique color for each combination of line, type, and direction
+                const uniqueKey = `${line}-${type}`;
+                //const color = stringToColor(uniqueKey);
+
                 // Add the GeoJSON as a layer
                 L.geoJSON(geojson, {
                 style: {
-                    color,
+                    color: "blue",
                     weight: 6,
-                    opacity: 0.7
+                    opacity: 0.3
                 }
                 }
                 ).addTo(map)
                 .bindPopup(`
-                    Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}
+                    Type: ${type} Line: ${line}, id: ${vehicle_id}
                     <br>
                     <button onclick="redirectToSpeedGraph('${line}', '${vehicle_id}', '${type}')">View Speed Graph</button>
                 `);
+
+         
+             
             });
             console.log("data loaded");
 
             const endTime = performance.now();
-            status.textContent += ` in ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
+            //status.textContent += ` in ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
             } catch (error) {
             console.error('Error loading data:', error);
-            status.textContent = error;
-            } finally {
+            //status.textContent = error;
             }
+        }
+        // Helper function to generate a color from a string
+        function stringToColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            let color = '#';
+            for (let i = 0; i < 3; i++) {
+                const value = (hash >> (i * 8)) & 0xFF;
+                color += ('00' + value.toString(16)).substr(-2);
+            }
+            return color;
         }
         async function loadStops() {
             try {
@@ -357,7 +336,6 @@
 
         loadParams();
         loadStops();
-        loadData(false);
     </script>
 
 <style>

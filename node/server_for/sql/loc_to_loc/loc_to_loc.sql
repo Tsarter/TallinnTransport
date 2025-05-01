@@ -6,8 +6,6 @@ trip_geoms AS (
     type,
     destination,
     unknown2,
-    MIN(datetime) AS trip_start,
-    MAX(datetime) AS trip_end,
     ST_MakeLine(geom::geometry ORDER BY datetime) AS geom_line
   FROM realtimedata
   WHERE datetime BETWEEN '2025-04-01' AND '2025-04-02'
@@ -68,6 +66,8 @@ final_selection AS (
     ap.type,
     ap.destination,
     ap.unknown2,
+    ap.geom_line,
+
     pd.earliest_a,
     pd.earliest_b,
     CASE
@@ -87,6 +87,7 @@ final_selection AS (
 ),
 ranked_points AS (
   SELECT
+    ST_LineLocatePoint(geom_line, geom) as line_frac,
     *,
     ROW_NUMBER() OVER (
   PARTITION BY vehicle_id, line, type, destination, unknown2, point_label, direction
@@ -106,10 +107,13 @@ SELECT
   a.type,
   a.unknown2,
   a.direction,
+  ST_AsGeoJSON(ST_LineSubstring(
+  a.geom_line,
+  LEAST(a.line_frac, b.line_frac),
+  GREATEST(a.line_frac, b.line_frac)
+  )) as geom_line_geojson,
   a.datetime AS time_a,
   b.datetime AS time_b,
-  a.geom AS geom_a,
-  b.geom AS geom_b,
   ABS(EXTRACT(EPOCH FROM (b.datetime - a.datetime))) AS seconds_diff
 FROM ranked_points a
 JOIN ranked_points b
