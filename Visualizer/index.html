@@ -37,6 +37,11 @@
             <p>Speeds for one vehicle is shown for whole day on a graph.<br> Its recommended to first open segment speeds and them click on a segment and then this view opens up</p>
             <button onclick="window.location.href='speedgraph/speedgraph.html'">Limited functionality</button>
         </div>
+        <div class="card">
+            <h2>Between A and B</h2>
+            <p>Finds all GPS routes between two points, shows statistics. <br> Export to Excel or Google Sheet to anaylise more.</p>
+            <button onclick="window.location.href='fromAtoB/fromAtoB.html'">Limited functionality</button>
+        </div>
     </div>
     <div class="showcase-section">
         <h3>Segment speeds</h3>
@@ -77,6 +82,7 @@
             justify-content: center;
             gap: 20px;
             margin-top: 30px;
+            overflow: auto;
         }
         .card {
             width: 300px;

@@ -100,9 +100,9 @@ app.get("/speedsegments", async (req, res) => {
     return res.status(400).json({ error: isValidRes });
   }
 
-  const { type, line, date, startHour, tws,maxSpeed, disStops } = req.query;
+  const { type, line, datetime, startHour, tws,maxSpeed, disStops } = req.query;
 
-  if (!date || !startHour || !tws) {
+  if (!datetime || !startHour || !tws) {
     return res.status(400).send("Date, startHour, and endHour are required");
   }
 
@@ -114,7 +114,7 @@ app.get("/speedsegments", async (req, res) => {
     let select_data =  getQuery("segment","select_data.sql");
     let not_within_stop =  getQuery("segment","not_within_stop.sql");
 
-    const startTime = `${date} ${startHour}:00:00`;
+    const startTime = `${datetime}`;
     
     let endTime = new Date(startTime);
     endTime.setHours(endTime.getHours() + parseInt(tws));

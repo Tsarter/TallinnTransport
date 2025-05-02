@@ -16,7 +16,7 @@
     <div id="map"></div>
 
     <div style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
-        <h4>Calculate times from A to B</h4>
+        <h4>Calculate times betweem A and B</h4>
         <label for="location1" style="color: red;">Location A:</label>
         <input type="text" id="location1" placeholder="Click on map" readonly>
         <br><br>
@@ -26,9 +26,9 @@
         <button onclick="loadLocations()">Load Locations</button>
         <p id="status"></p>
     </div>
-    <div id="popover-container" style="display:none; position: absolute; top: 150px; right: 10px; z-index: 1001; background: #f9f9f9; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; width: 400px;">
+    <div id="popover-container" style="display:none; position: absolute; top: 240px; right: 10px; z-index: 1001; background: #f9f9f9; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; width: 400px;">
         <h4>Trip Segment Times</h4>
-        <button onclick="document.getElementById('popover-container').style.display='none'" style="margin-top: 30px;">Close</button>
+        <button onclick="document.getElementById('popover-container').style.display='none'" style="margin-top: 10px;">Close</button>
         <div id="popover-content"></div>
     </div>
 
@@ -249,7 +249,7 @@
                 L.geoJSON(geojson, {
                 style: {
                     color: "blue",
-                    weight: 6,
+                    weight: 3,
                     opacity: 0.3
                 }
                 }
