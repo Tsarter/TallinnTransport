@@ -40,7 +40,6 @@ function validateParams(query) {
     line,
     date,
     startTime,
-    tws,
     maxSpeed,
     disStops,
     vehicle_id,
@@ -70,15 +69,6 @@ function validateParams(query) {
     }
   }
 
-  // Validate that startHour and endHour are integers
-  if (
-    startHour &&
-    (!Number.isInteger(Number(startHour)) ||
-      !Number.isInteger(Number(tws)) ||
-      Number(tws) > 124)
-  ) {
-    return "startHour and endHour must be integers";
-  }
 
   // Validate that lineparam is like this 1,2,3,10,18,84,18A,47B
   const lineRegex = /^(?:\d{1,3}[A-Z]?)$/;
