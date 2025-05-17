@@ -1,2 +1,9 @@
 example_data
 proxy
+**/node_modules/
+*.pyc
+*.csv
+*.env
+*.log
+report.html
+node/gif_maker_for/images/

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postgres Data on Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="timeDiv" style="display:none; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; padding: 5px 10px; border-radius: 5px; font-size: 16px; font-weight: bold;">
+        15:00
+    </div>
+    <div id="selectSection" style="position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
+        <label for="hourSlider">Hour of Day:</label>
+        <input type="range" id="hourSlider" name="hourSlider" min="0" max="23" value="17">
+        <span id="hourValue">17</span>:00
+
+
+        <br><br>
+
+        <label for="datePicker">Date:</label>
+        <input type="date" id="datePicker" name="datePicker" value="" min="2024-07-06">
+        <script>
+            let yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            yesterday = yesterday.toISOString().split('T')[0];
+
+            document.getElementById('datePicker').value = yesterday;
+        </script>
+
+        <br><br>
+
+        <label for="timeWindowSize">Time Window Size (hours):</label>
+        <input type="number" id="timeWindowSize" name="timeWindowSize" min="1" max="24" value="1">
+
+        <br><br>
+
+        <label for="speedLimit">Show speeds under:</label>
+        <input type="number" id="speedLimit" name="speedLimit" min="1" max="100" value="5">
+
+        <br><br>
+
+        <label for="linePicker">Choose line</label>
+        <input type="text" id="linePicker" name="linePicker" placeholder="Line">
+        <br><br>
+
+        <label for="typePicker">Choose bus,tram,trol</label>
+        <select id="typePicker" name="typePicker">
+            <option value="">All</option>
+            <option value="1">trol</option>
+            <option value="2">bus</option>
+            <option value="3">tram</option>
+        </select>
+        <br><br>
+
+        <label class="tooltip" for="disStops">Disable near stops <span class="tooltiptext">This will filter out all segments that are closer <br> than given number in meters to any stop </span> </label>
+        <input type="text" id="disStops" name="disStops" placeholder="0m" title="Disable stops that are near each other">
+
+        <br><br>
+        <button onclick="loadData()" id="loadData">Load Data</button> <p id="status"></p>
+
+    </div>
+
+    <div id="locationContainer" style="position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px;">
+        <h4>Calculate times between A and B</h4>
+        <label for="location1" style="color: red;">Location A:</label>
+        <input type="text" id="location1" placeholder="Click on map" readonly>
+        <br><br>
+        <label for="location2" style="color: blue;">Location B:</label>
+        <input type="text" id="location2" placeholder="Click on map" readonly>
+        <br><br>
+        <button onclick="loadLocations()">Load Locations</button>
+        <a href="/fromAtoB/fromAtoB.html">More functionality</a>
+    </div>
+    <style>
+        @media (max-width: 800px) {
+            #locationContainer {
+                display: none;
+            }
+        }
+    </style>
+    <div id="popover-container" style="display:none; position: absolute; top: 150px; right: 10px; z-index: 1001; background: #f9f9f9; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; width: 400px;">
+        <h4>Trip Segment Times</h4>
+        <button onclick="document.getElementById('popover-container').style.display='none'" style="margin-top: 10px;">Close</button>
+        <div id="popover-content"></div>
+    </div>
+
+    <script>
+        let location1Marker, location2Marker;
+
+        async function loadLocations() {
+            if (!location1Marker || !location2Marker) {
+                alert('Please select both locations on the map.');
+                return;
+            }
+            const location1 = document.getElementById('location1').value;
+            const location2 = document.getElementById('location2').value;
+            console.log('Loading data for locations:', location1, location2);
+            // Add your logic to handle the selected locations
+            const lat1 = location1.split(',')[0].trim();
+            const lon1 = location1.split(',')[1].trim();
+            const lat2 = location2.split(',')[0].trim();
+            const lon2 = location2.split(',')[1].trim();
+            const url = `/api/loc_to_loc?lat1=${lat1}&lon1=${lon1}&lat2=${lat2}&lon2=${lon2}`;
+            const response = await fetch(url);
+            console.log("response got");
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            const data = await response.json();
+            console.log("data: ", data);
+            showPopover(data);
+
+        }
+        
+    function showPopover(data) {
+        const container = document.getElementById('popover-container');
+        const content = document.getElementById('popover-content');
+
+        if (!data || data.length === 0) {
+            content.innerHTML = "<p>No results</p>";
+            container.style.display = 'block';
+            return;
+        }
+        // Aggregates
+        const stats = calculateStats(data);
+        let html = `<hr><h5>Statistics</h5>`;
+        html += stats.map(group => `
+            <b>${group.label}</b><br>
+            Count: ${group.count} &nbsp;|&nbsp;
+            Min: ${group.min.toFixed(1)}s &nbsp;|&nbsp;
+            Max: ${group.max.toFixed(1)}s &nbsp;|&nbsp;
+            Avg: ${group.avg.toFixed(1)}s<br><br>
+        `).join('');
+
+        // Main Table
+        html += `
+            <table border="1" cellpadding="5" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr>
+                        <th>Vehicle</th><th>Line</th><th>Direction</th><th>Start</th><th>End</th><th>Seconds</th>
+                    </tr>
+                </thead><tbody>
+        `;
+
+        for (const row of data) {
+            html += `<tr>
+                <td>${row.vehicle_id}</td>
+                <td>${row.line}</td>
+                <td>${row.direction}</td>
+                <td>${new Date(Math.min(new Date(row.time_a), new Date(row.time_b))).toLocaleTimeString('et-EE')}</td>
+                <td>${new Date(Math.max(new Date(row.time_a), new Date(row.time_b))).toLocaleTimeString('et-EE')}</td>
+                <td>${parseFloat(row.seconds_diff).toFixed(1)}</td>
+            </tr>`;
+        }
+
+        html += '</tbody></table>';
+
+        content.innerHTML = html;
+        container.style.display = 'block';
+    }
+
+    function calculateStats(data) {
+        const stats = [];
+
+        function groupBy(keyFn) {
+            const groups = {};
+            for (const row of data) {
+                const key = keyFn(row);
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(parseFloat(row.seconds_diff));
+            }
+            return groups;
+        }
+
+        const global = data.map(d => parseFloat(d.seconds_diff));
+        stats.push(buildStats(global, 'All Trips'));
+
+        const byLine = groupBy(d => d.line);
+        for (const [line, arr] of Object.entries(byLine)) {
+            stats.push(buildStats(arr, `Line ${line}`));
+        }
+
+        const byLineDir = groupBy(d => d.line + ' ' + d.direction);
+        for (const [key, arr] of Object.entries(byLineDir)) {
+            stats.push(buildStats(arr, `Line ${key}`));
+        }
+
+        return stats;
+    }
+
+    function buildStats(values, label) {
+        const sum = values.reduce((a, b) => a + b, 0);
+        return {
+            label,
+            count: values.length,
+            min: Math.min(...values),
+            max: Math.max(...values),
+            avg: sum / values.length
+        };
+    }
+    </script>
+
+    <script>
+        const hourSlider = document.getElementById('hourSlider');
+        const hourValue = document.getElementById('hourValue');
+        const datePicker = document.getElementById('datePicker');
+        const timeWindowSize = document.getElementById('timeWindowSize');
+        const linePicker = document.getElementById('linePicker');
+        const status = document.getElementById('status');
+        const speedLimit = document.getElementById('speedLimit');
+        const typePicker = document.getElementById('typePicker');
+        const disableStops = document.getElementById('disStops');
+
+
+
+        hourSlider.oninput = function() {
+            hourValue.textContent = this.value;
+        }
+
+        timeWindowSize.oninput = function() {
+        }
+
+        linePicker.oninput = function() {
+        }
+        function getColor(speed, avgSpeed = 20) {
+            // Normalize the speed to a value between 0 and 1
+            var normalizedSpeed = speed < 5 ? 0 : Math.max(0, Math.min(1, speed  / (avgSpeed * 2)));
+            
+            // Calculate the red, green, and blue components
+            var red, green;
+            if (normalizedSpeed < 0.5) {
+                // Transition from red to yellow
+                red = 255;
+                green = Math.round(510 * normalizedSpeed); // 0 to 255
+            } else {
+                // Transition from yellow to green
+                red = Math.round(255 * (1 - (normalizedSpeed - 0.5) * 2)); // 255 to 0
+                green = 255;
+            }
+            
+            // Return the color as a hex string
+            return `rgb(${red},${green},0)`;
+        }
+        // Initialize the Leaflet map
+        const map = L.map('map')
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Add a legend to the map
+        const legend = L.control({ position: 'bottomleft' });
+
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'info legend');
+            div.innerHTML = `
+            <i style="background: red; width: 18px; height: 18px; display: inline-block; margin-right: 5px;"></i> 5 km/h<br>
+            <i style="background: yellow; width: 18px; height: 18px; display: inline-block; margin-right: 5px;"></i> 20 km/h<br>
+            <i style="background: green; width: 18px; height: 18px; display: inline-block; margin-right: 5px;"></i> 30 km/h
+            `;
+            return div;
+        };
+
+        legend.addTo(map);
+
+        map.on('click', function (e) {
+            if (!location1Marker) {
+                location1Marker = L.circle(e.latlng, { radius: 50, color: 'red' }).addTo(map);
+                document.getElementById('location1').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+            } else if (!location2Marker) {
+                location2Marker = L.circle(e.latlng, { radius: 50, color: 'blue' }).addTo(map);
+                document.getElementById('location2').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+            } else {
+                map.removeLayer(location1Marker);
+                map.removeLayer(location2Marker);
+                location1Marker = null;
+                location2Marker = null;
+                document.getElementById('location1').value = '';
+                document.getElementById('location2').value = '';
+                
+            }
+        });
+
+        function redirectToSpeedGraph(line, vehicle_id, type) {
+            const transportTypes = {
+                1: "trol",
+                2: "bus",
+                3: "tram"
+            };
+            type = transportTypes[type] || type;
+            const startTime = datePicker.value + " 00:00:00";
+            window.open(`/speedgraph/speedgraph.html?line=${line}&type=${type}&vehicle_id=${vehicle_id}&startTime=${startTime}`, '_blank');
+        }
+        let data = [];
+        async function  fetchSpeedsegments(startTimeParam, endTimeParam) {
+            const startHour = hourSlider.value;
+            const tws = parseInt(timeWindowSize.value);
+            const date = datePicker.value;
+            const maxSpeed = speedLimit.value;
+            const line = linePicker.value;
+            const type = typePicker.value;
+            const disStops = disableStops.value;
+            const mapCenterLat = map.getCenter().lat.toFixed(6);
+            const mapCenterLng = map.getCenter().lng.toFixed(6);
+            const mapZoom = map.getZoom();
+            let starttime, endtime;
+            if (!startTimeParam || !endTimeParam) {
+                // Create new datetime object with YYYY-MM-DD HH:MM:SS format
+                starttime = `${date} ${startHour.toString().padStart(2, '0')}:00:00`;
+                // endtime is starttime + tws
+                endtime = new Date(new Date(starttime).getTime() + tws * 60 * 60 * 1000);
+                endtime = `${endtime.getFullYear()}-${(endtime.getMonth() + 1).toString().padStart(2, '0')}-${endtime.getDate().toString().padStart(2, '0')} ${endtime.getHours().toString().padStart(2, '0')}:${endtime.getMinutes().toString().padStart(2, '0')}:00`;
+      
+            } else {
+                // Use the provided start and end times
+                starttime = startTimeParam;
+                endtime = endTimeParam;
+            }
+
+            // add params from url if they exist, missi
+            
+            let url = "/api/speedsegments?"
+            url += `startHour=${startHour}`
+            url += `&tws=${tws}`
+            url += `&startTime=${starttime}`
+            url += `&endTime=${endtime}`
+            url += `&line=${line}`
+            url += `&maxSpeed=${maxSpeed}`
+            url += `&type=${type}`
+            url += `&disStops=${disStops}`
+    
+
+            const response = await fetch(url);
+            console.log("response got");
+            if (response.status === 400) {
+                let data = await response.json();
+                throw new Error(data.error);
+            }
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            data = await response.json();
+            // Append parameters to the current URL
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('startHour', startHour);
+            currentUrl.searchParams.set('tws', tws);
+            currentUrl.searchParams.set('startTime', starttime);
+            currentUrl.searchParams.set('endTime', endtime);
+            currentUrl.searchParams.set('line', line);
+            currentUrl.searchParams.set('maxSpeed', maxSpeed);
+            currentUrl.searchParams.set('type', type);
+            currentUrl.searchParams.set('disStops', disStops);
+            currentUrl.searchParams.set('mapCenterLat', mapCenterLat);
+            currentUrl.searchParams.set('mapCenterLng', mapCenterLng);
+            
+            window.history.replaceState(null, '', currentUrl);
+            return;
+        }
+        // Fetch data from server and display on the map
+        async function loadData(useCache, startTimeParam, endTimeParam) {
+            const startTime = performance.now();
+            try {
+            console.log("loading data");
+            status.textContent = "Loading data...";
+            
+            if (data.length === 0 || !useCache) {
+                await fetchSpeedsegments(startTimeParam, endTimeParam);
+            } else {
+                console.log("Using cached data");
+            }
+            //console.log("data: ", data);
+            status.textContent = `Loaded ${data.length} points`;
+
+            // Clear existing layers
+            map.eachLayer(layer => {
+                if (layer instanceof L.GeoJSON) {
+                map.removeLayer(layer);
+                }
+            });
+
+            data.forEach(row => {
+                const {line, segment, speed_kmh, vehicle_id, type } = row;
+
+                // Parse GeoJSON directly
+                const geojson = JSON.parse(segment);
+
+                // Determine color based on speed
+                //const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
+                const color = getColor(speed_kmh);
+                //console.log("zoom", map.getZoom());
+                // Add the GeoJSON as a layer
+                L.geoJSON(geojson, {
+                style: {
+                    color,
+                    weight: 6,
+                    opacity: 0.7
+                }
+                }
+                ).addTo(map)
+                .bindPopup(`
+                    Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}
+                    <br>
+                    <button onclick="redirectToSpeedGraph('${line}', '${vehicle_id}', '${type}')">View Speed Graph</button>
+                `);
+            });
+            console.log("data loaded");
+
+            const endTime = performance.now();
+            status.textContent += ` in ${((endTime - startTime) / 1000).toFixed(1)} seconds.`;
+            } catch (error) {
+            console.error('Error loading data:', error);
+            status.textContent = error;
+            } finally {
+            }
+        }
+        async function loadStops() {
+            try {
+            console.log("loading stops data");
+            const response = await fetch('/api/stops');
+            if (!response.ok) {
+                throw new Error('Failed to fetch stops data');
+            }
+
+            const stopsData = await response.json();
+            console.log("stops data: ", stopsData);
+
+            stopsData.forEach(stop => {
+                const { name, latitude, longitude } = stop;
+
+                // Add a small circle marker for each stop
+                L.circle([latitude, longitude], {
+                    radius: 7, // Radius in meters
+                    fillColor: 'blue',
+                    fillOpacity: 0.5,
+                    color: null // No border
+                })
+                .addTo(map)
+                .bindPopup(`Stop: ${name}`);
+            });
+
+            console.log("stops data loaded");
+            } catch (error) {
+            console.error('Error loading stops data:', error);
+            }
+        }
+        function loadParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tws = urlParams.get('tws');
+            const date = urlParams.get('startTime')
+            const startHour = urlParams.get('startTime');
+            const line = urlParams.get('line');
+            const maxSpeed = urlParams.get('maxSpeed');
+            const type = urlParams.get('type');
+            const disStops = urlParams.get('disStops');
+            const cleanUi = urlParams.get('cleanUi');
+            const startTimeParam = urlParams.get('startTime');
+            const endTimeParam = urlParams.get('endTime');
+
+            if (startHour) hourSlider.value = startHour.split(" ")[1].split(":")[0];
+            if (startHour) hourValue.textContent = startHour.split(" ")[1].split(":")[0];
+            if (tws) timeWindowSize.value = tws;
+            if (date) datePicker.value = date.split(" ")[0];;
+            if (line) linePicker.value = line;
+            if (maxSpeed) speedLimit.value = maxSpeed;
+            if (type) typePicker.value = type;
+            if (disStops) disableStops.value = disStops;
+
+            if (cleanUi === "true") {
+                document.getElementById('locationContainer').style.display = 'none';
+                document.getElementById('selectSection').style.display = 'none';
+                document.getElementById('timeDiv').style.display = 'block';
+                document.getElementById('timeDiv').innerHTML = startTimeParam.split(" ")[1].split(":")[0] + ":" + startTimeParam.split(" ")[1].split(":")[1];
+            }
+
+            const mapCenterLat = urlParams.get('mapCenterLat');
+            const mapCenterLng = urlParams.get('mapCenterLng');
+            const mapZoom = urlParams.get('mapZoom');
+
+            if (mapCenterLat && mapCenterLng && mapZoom) {
+                map.setView([parseFloat(mapCenterLat), parseFloat(mapCenterLng)], parseInt(mapZoom));
+            } else {
+                map.setView([59.437, 24.753], 12);
+            }
+            return {startTimeParam, endTimeParam};
+        }
+
+        let {startTimeParam, endTimeParam} = loadParams();
+        loadStops();
+        loadData(false,startTimeParam, endTimeParam);
+    </script>
+
+<style>
+    /* Tooltip container */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+      border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+    }
+    
+    /* Tooltip text */
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 190px;
+      background-color: black;
+      color: #fff;
+      text-align: center;
+      padding: 10px 0;
+      border-radius: 6px;
+     
+      /* Position the tooltip text - see examples below! */
+      position: absolute;
+      z-index: 1;
+    }
+    
+    /* Show the tooltip text when you mouse over the tooltip container */
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+    }
+    </style>
+</body>
+</html>

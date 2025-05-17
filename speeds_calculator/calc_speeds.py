@@ -2,6 +2,7 @@ from helper import *
 
 vehicle_types = {1: "trol", 2: "bus", 3: "tram"}
 
+DATA_DIR = "/home/tanel/Documents/public_transport_project/HardDrive/data"
 
 def in_tallinn(latitude, longitude):
     min_lat, max_lat = 59.317, 59.746
@@ -46,13 +47,11 @@ def calculate_speeds(gps_data):
             debug = speeds[vehicle_id]
             if vehicle_id == "bus_13_1442" and str(time) == "2024-10-04 09:27:04":
                 print("hey")
-            # Calculate distance between previous and current point 59.40839 24.74844 59.405 24.73856
+            # Calculate distance between previous and current point
             previous_coords = speeds[vehicle_id]["previous_coords"]
             distance = haversine(previous_coords, vehicle_coords)
             speeds[vehicle_id]["distances"].append(distance)
             speeds[vehicle_id]["previous_coords"] = vehicle_coords
-
-            # Check if vehicle is at the start or end of route
 
     return speeds
 
@@ -60,9 +59,12 @@ def calculate_speeds(gps_data):
 def get_data_on_line(vehicle_id, data):
     on_line_data = []
     vehicle_type, line = vehicle_id.split("_")[0:2]
+    day = str(data["time"][0]).split(" ")[0]
     route = load_route_data(
-        f"iaib/example_data/2024-10-04/routes_data/2024-10-04/{vehicle_type}_{line}_routes.txt"
+        f"{DATA_DIR}/transport_data/routes_data/{day}/{vehicle_type}_{line}_routes.txt"
     )
+    if len(route) < 4:
+        return []
     start = route[0]
     end = route[-1]
     on_line = False
@@ -93,32 +95,33 @@ html_options = []
 
 
 # Output the total distance traveled for each vehicle
-def print_avg_speeds(speeds):
+def dump_movements(speeds):
     total_average_speeds = {}
 
     for vehicle_id, data in speeds.items():
         if vehicle_id.split("_")[0] == "unknown":
             continue
         on_line_data = get_data_on_line(vehicle_id, data)
+        if on_line_data == []: continue
 
         if len(on_line_data) > 1000:
             # global html_options
             # html_options.append(f'<option value="{vehicle_id}">{vehicle_id}</option> ')
-            with open(f"movements/bus_movement_{vehicle_id}.json", "w") as out_file:
+            with open(f"{DATA_DIR}/modified_data/movement_{vehicle_id}.json", "w") as out_file:
                 json.dump(
                     {
                         "coordinates": list(
                             map(lambda x: [x[0][1], x[0][0]], on_line_data)
                         ),
                         "times": list(map(lambda x: x[1], on_line_data)),
-                        "distances": list(map(lambda x: x[2], on_line_data)),
+                        "distances": list(map(lambda x: round(x[2]), on_line_data)),
                     },
                     out_file,
                     indent=2,
                     default=str,
                 )
 
-        total_distance = sum([x[2] for x in on_line_data])  # in meters
+        """ total_distance = sum([x[2] for x in on_line_data])  # in meters
         total_time = (data["time"][-1] - data["time"][0]).total_seconds()
         average_speed = (
             (total_distance / total_time) * 3.6 if total_distance > 0 else 0
@@ -137,9 +140,9 @@ def print_avg_speeds(speeds):
             }
         else:
             total_average_speeds[line]["total_distance"] += total_distance
-            total_average_speeds[line]["total_time"] += total_time
+            total_average_speeds[line]["total_time"] += total_time """
     # sorted_html_options = "".join(sorted(html_options))
-    sorted_average_speeds = sorted(
+    """ sorted_average_speeds = sorted(
         [
             [line, (data["total_distance"] / data["total_time"]) * 3.6]
             for line, data in total_average_speeds.items()
@@ -147,13 +150,13 @@ def print_avg_speeds(speeds):
         key=lambda x: x[1],
     )
     for line, average_speed in sorted_average_speeds:
-        print(f"Line {line} average speed was {average_speed:.2f} km/h")
+        print(f"Line {line} average speed was {average_speed:.2f} km/h") """
 
 
 def main():
 
     # Load your GPS data and route data
-    gps_data = load_gps_data("iaib/example_data/2024-10-04/realtime_data/2024-10-04")
+    gps_data = load_gps_data(DATA_DIR + "/transport_data/realtime_data/2024-08-27")
 
     """ route_data = load_route_data(
         f"iaib/example_data/2024-10-04/routes_data/2024-10-04/bus_{line}_routes.txt"
@@ -161,7 +164,7 @@ def main():
     # Calculate the speeds
     speeds = calculate_speeds(gps_data)
 
-    print_avg_speeds(speeds)
+    dump_movements(speeds)
 
     # Get data for visulazing (debuging)
     """ line_busId = "12_3495"

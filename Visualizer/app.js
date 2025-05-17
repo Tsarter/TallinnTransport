@@ -10,18 +10,45 @@ let busData = [];
 let currentIndex = 0; // Keep track of the current index
 let playbackInterval; // To store the playback interval
 let liveDataInterval; // To store the live data interval
-let isLiveData = false; // Flag to check if live data is on
+let isLiveData = false; 
+
+const urlParams = new URLSearchParams(window.location.search);
+const dateParam = urlParams.get('date') ?? "2025-03-12"
+const speedParam = urlParams.get('speed') ?? 1000;
+
+document.getElementById('datePicker').value = dateParam
 
 // Fetch the combined bus data
-fetch("combined_bus_data.json")
-  .then((response) => response.json())
-  .then((data) => {
-    busData = preparePlaybackData(data);
-    //startPlayback(); // Start the playback after data is prepared
-  })
-  .catch((error) => {
-    console.error("Error loading bus data:", error);
-  });
+const dataUrl = `transport_data/modified_data/combined_realtime/${dateParam}/combined_bus_data.gz`;
+function getData(){
+
+  fetch(dataUrl)
+    .then((response) => 
+      response.arrayBuffer()
+  )
+    .then((arrayBuffer) => {
+      data = decompressGz(arrayBuffer);
+      busData = preparePlaybackData(data);
+      startPlayback(); // Start the playback after data is prepared
+      alert("Data loaded")
+    })
+    .catch((error) => {
+      console.error("Error loading bus data:", error);
+    });
+}
+getData();
+
+
+function decompressGz(data) {
+    try {
+        const decompressedData = pako.inflate(data, { to: 'string' });
+        const jsonData = JSON.parse(decompressedData);
+        return jsonData;
+    } catch (err) {
+        console.error('Decompression error:', err);
+        return null;
+    }
+}
 
 // Prepare data for playback
 function preparePlaybackData(data) {
@@ -63,7 +90,6 @@ function startPlayback() {
 
       // Clear existing markers from the previous time step
       clearMarkers();
-      console.log(positions);
       // Initialize markers and bind click event
       positions.forEach(({ lat, lng, type, line }) => {
         let color;
@@ -98,7 +124,7 @@ function startPlayback() {
       clearInterval(playbackInterval);
       currentIndex = 0; // Reset index if you want to loop again
     }
-  }, 1000); // Update every second (1000 ms)
+  }, Number(speedParam)); // Update every second (1000 ms)
 }
 
 // Clear existing markers from the map
@@ -180,7 +206,7 @@ function fetchAndDisplayRoute(type, lineNumber, marker) {
 
   const routeFileName = `${vehicleType}_${lineNumber}_routes.txt`;
 
-  fetch(`routes_folder/${routeFileName}`)
+  fetch(`transport_data/transport_data/routes_data/${dateParam}/${routeFileName}`)
     .then((response) => response.text())
     .then((routeData) => {
       const route = routeData.split("\n")[1]; // Simplified: using second line
@@ -223,3 +249,16 @@ function onMarkerClick(e, type, lineNumber) {
 function clearIntervals() {
   clearInterval(playbackInterval);
 }
+
+
+document.getElementById('datePicker').addEventListener('change', function(event) {
+  const selectedDate = event.target.value; // Get the selected date in YYYY-MM-DD format
+  if (selectedDate) {
+      // Construct the URL with the selected date as a query parameter
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('date', selectedDate); // Set the date query parameter
+
+      // Reload the page with the new query parameter
+      window.location.href = currentUrl.toString();
+  }
+});

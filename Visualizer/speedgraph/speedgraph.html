@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Movement Visualization</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+        #slider {
+            width: 100%;
+            margin-top: 10px;
+        }
+        #speedChartContainer {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vehicle Speed Visualization</h1>
+       
+    <div id="map"></div>
+    <div>
+        <button id="decreaseSlider">-</button>
+        <input type="range" id="slider" min="0" max="0" value="0" step="1">
+        <button id="increaseSlider">+</button>
+    </div>
+    <p>Counter: <span id="sliderValue">0</span></p>
+    <select id="fileSelect">
+        <option value="">Vali sõiduk</option>
+
+    </select>
+    <label for="timeWindowSize">Disabled</label>
+    <input type="number" id="timeWindowSize" min="1" value="20" step="1">
+    <label for="depotSpeedsSelect">Disabled</label>
+    <select id="depotSpeedsSelect">
+        <option value="true"> </option>
+        <option value="false"> </option>
+    </select>
+    <div id="speedChartContainer">
+        <canvas id="speedChart"></canvas> <!-- Canvas for the speed chart -->
+    </div>
+    <button id="reloadGraphButton">Disabled</button>
+    <script>
+        document.getElementById('reloadGraphButton').addEventListener('click', () => {
+            // reload page
+            window.location.reload();
+        });
+    </script>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map with a default view (it will be updated when coordinates are loaded)
+        const map = L.map('map').setView([59.42856, 24.77627], 13);
+        L.control.scale({
+        position: 'bottomright',  // Position of the scale
+        metric: true,             // Display in meters/kilometers
+        imperial: false           // Disable miles/feet display
+        }).addTo(map);
+
+        // Add the OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Get references to the slider and the display for the current value
+        const slider = document.getElementById('slider');
+        const sliderValue = document.getElementById('sliderValue');
+
+        const decreaseButton = document.getElementById('decreaseSlider');
+        const increaseButton = document.getElementById('increaseSlider');
+
+        decreaseButton.addEventListener('click', () => {
+            if (slider.value > 0) {
+                slider.value = parseInt(slider.value) - 1;
+                slider.dispatchEvent(new Event('input')); // Trigger input event
+            }
+        });
+
+        increaseButton.addEventListener('click', () => {
+            
+            slider.value = parseInt(slider.value) + 1;
+            slider.dispatchEvent(new Event('input')); // Trigger input event
+            
+        });
+
+        // Fileselect
+        const fileSelect = document.getElementById('fileSelect');
+        fileSelect.addEventListener('change', async (event) => {
+            const selectedFile = event.target.value;
+    
+            if (selectedFile) {
+                // BS from before -> 
+                // window.location.href = `${window.location.pathname}?vehicle_id=${encodeURIComponent(selectedFile)}`;
+            }
+        });
+
+        // Initialize Chart.js for speed visualization
+        const ctx = document.getElementById('speedChart').getContext('2d');
+        const speedChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],  // Time points (in seconds)
+                datasets: [{
+                    label: 'Bus Speed (km/h)',
+                    data: [],  // Speed data (will be updated after data is loaded)
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    pointBackgroundColor: [],
+                    pointRadius: [],
+                    fill: true
+                },
+                {
+                label: 'Average Speed (km/h)',
+                data: [],  // Array with avgSpeed for each point
+                borderColor: 'rgba(255, 99, 132, 1)',  // Red color for average speed line
+                borderDash: [5, 5],  // Dashed line style
+                pointRadius: 0,      // No points for average line
+                fill: false
+            }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time (s)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Speed (km/h)'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        // Function to calculate distance between two coordinates using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+                                const R = 6371; // Radius of the Earth in kilometers
+                                const dLat = (lat2 - lat1) * Math.PI / 180;
+                                const dLon = (lon2 - lon1) * Math.PI / 180;
+                                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                                return R * c;
+                            }
+                        
+        function loadRoute(date, line, vehicleType = "bus"){
+                        //const [vehicleType, lineNumber] = vehicle_id.split("_");
+                        // vehicleType = "bus";
+                        const routeFileName = `${vehicleType}_${line}_routes.txt`;
+                        
+                        fetch(`/transport_data/transport_data/routes_data/${date}/${routeFileName}`)
+                        .then((response) => response.text())
+                        .then((routeData) => {
+                            const route = routeData.split("\n")[1]; // Simplified: using second line
+                            const routePoints = decodePolyline(route);
+                            // Calculate the total route length
+                            let totalDistance = 0;
+                            for (let i = 1; i < routePoints.length; i++) {
+                                const [lat1, lon1] = routePoints[i - 1];
+                                const [lat2, lon2] = routePoints[i];
+                                totalDistance += calculateDistance(lat1, lon1, lat2, lon2);
+                            }
+
+                        
+
+                            console.log(`Total route length: ${totalDistance.toFixed(2)} km`);
+
+                            // Draw the route on the map
+                            const polyline = L.polyline(routePoints, {
+                            color: "blue",
+                            weight: 5,
+                            opacity: 0.7,
+                            }).addTo(map);
+                            // Add markers at each route point
+                           /*  routePoints.forEach((point) => {
+                            L.circleMarker(point, {
+                                radius: 4,
+                                color: "red",
+                                fillColor: "red",
+                                fillOpacity: 0.8,
+                            }).addTo(map);
+                            }); */
+
+                        })
+                        // Function to decode the encoded polyline
+                        function decodePolyline(encoded) {
+                        let points = [];
+                        let index = 0,
+                            len = encoded.length;
+                        let lat = 0,
+                            lng = 0;
+
+                        while (index < len) {
+                            let b,
+                            shift = 0,
+                            result = 0;
+                            do {
+                            b = encoded.charCodeAt(index++) - 63;
+                            result |= (b & 0x1f) << shift;
+                            shift += 5;
+                            } while (b >= 0x20);
+                            let dlat = result & 1 ? ~(result >> 1) : result >> 1;
+                            lat += dlat;
+
+                            shift = 0;
+                            result = 0;
+                            do {
+                            b = encoded.charCodeAt(index++) - 63;
+                            result |= (b & 0x1f) << shift;
+                            shift += 5;
+                            } while (b >= 0x20);
+                            let dlng = result & 1 ? ~(result >> 1) : result >> 1;
+                            lng += dlng;
+
+                            points.push([lat * 1e-5, lng * 1e-5]);
+                        }
+
+                        return points;
+                        }
+                    }
+
+
+        // Function to load coordinates and distances from a JSON file
+        async function loadCoordinates(vehicle_id, startTime, depotSpeeds, line) {
+            try {
+                const tws = document.getElementById('timeWindowSize').value; 
+                // const depotSpeeds = document.getElementById('depotSpeedsSelect').value;
+                const response = await fetch(`/api/speedgraph?vehicle_id=${vehicle_id}&line=${line}&startTime=${startTime}&tws=${tws}&disableDepos=${depotSpeeds}`); // Fetch data from API
+                const data = await response.json(); // Parse JSON response
+
+                // Filter data for the given vehicle_id
+                if (data.length === 0) {
+                    console.error("No data found for vehicle:", vehicle_id);
+                    return;
+                }
+                console.log(`Data length: ${data.length}`);
+
+                // Extract speed and time data
+                const times = data.map(entry => entry.datetime);
+                const speeds = data.map(entry => entry.speed_kmh);
+
+                let prevTime = new Date(times[0]);
+                // reduce total time
+                let totalTime = 0;
+                let totalDistance = 0;
+                for (let i = 1; i < data.length; i++) {
+                    const currentTime = new Date(data[i].datetime);
+                    const [lat1, lon1] = [data[i - 1].lat, data[i - 1].lon];
+                    const [lat2, lon2] = [data[i].lat, data[i].lon];
+
+                    // Skip time gaps larger than 2 minutes
+                    if ((currentTime - prevTime) / 1000 > 65) {
+                        console.log("skipping time " + prevTime.toLocaleTimeString('en-US', { hour12: false }) + " " + currentTime.toLocaleTimeString('en-US', { hour12: false }));
+                        prevTime = currentTime;
+                        continue;
+                    }
+
+                    totalTime += (currentTime - prevTime) / 1000; // in seconds
+                    totalDistance += calculateDistance(lat1, lon1, lat2, lon2) * 1000; // in meters
+                    prevTime = currentTime;
+                }
+                console.log('Totaltime:', totalTime);
+                console.log('Total distance:', totalDistance);
+                // Calculate average speed
+                const avgSpeed2 = (totalDistance / totalTime) * 3.6;
+
+                // Update the slider max value based on data length
+                slider.max = speeds.length - 1;
+     
+                let index = 0;
+
+                // Function to update the chart and slider display
+                function updateSpeedDisplay(index) {
+                    // show in estonian timezone not UTC
+                    const date = new Date(times[index]);
+                    const options = { timeZone: 'Europe/Tallinn', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                    const timeString = date.toLocaleString('et-EE', options);
+               
+                    sliderValue.textContent = `Index: ${index}, Time: ${timeString}, Speed: ${speeds[index].toFixed(1)} km/h`;
+                    highlightChartPoint(index);
+                }
+                let busMarker = L.marker([data[0]["lat"], data[0]["lon"]]).addTo(map);
+
+                // Function to update the bus position based on slider value
+                function updateBusPosition(index) {
+                    busMarker.setLatLng([data[index]["lat"], data[index]["lon"]]);
+                    busMarker.bindPopup(`Speed: ${speeds[index].toFixed(1)} km/h`).openPopup();
+                }
+
+                // Event listener for the slider to update speed display
+                slider.addEventListener('input', function() {
+                    const index = parseInt(this.value);
+                    updateSpeedDisplay(index);
+                    updateBusPosition(index);
+                });
+
+                // Populate the speed chart
+                function populateSpeedChart() {
+                    let prev_speed1 = 0, prev_speed2 = 0, prev_speed3 = 0;
+                    let avgSpeed = 0;
+                
+                    speeds.forEach((speedKmh, i) => {
+                        //if (i === 0) return;
+                        speedChart.data.labels.push(new Date(times[i]).toLocaleTimeString('en-US', { hour12: false }));
+                        speedChart.data.datasets[0].data.push((speedKmh + prev_speed1 + prev_speed2 + prev_speed3) / 4);
+                        speedChart.data.datasets[0].pointRadius.push(0);
+                        speedChart.data.datasets[0].pointBackgroundColor.push('rgba(75, 192, 192, 1)');
+
+                        prev_speed3 = prev_speed2;
+                        prev_speed2 = prev_speed1;
+                        prev_speed1 = speedKmh;
+                        avgSpeed += speedKmh;
+                        
+                    });
+
+                    avgSpeed /= speeds.length;
+                    console.log(avgSpeed2);
+                    console.log(avgSpeed);
+                    speedChart.data.datasets[1].data = Array(speeds.length).fill(avgSpeed);
+                    speedChart.update();
+        
+                }
+
+                let highlightedIndex = null;
+
+                function highlightChartPoint(index) {
+                    if (highlightedIndex !== null) {
+                        speedChart.data.datasets[0].pointBackgroundColor[highlightedIndex] = 'rgba(75, 192, 192, 1)';
+                        speedChart.data.datasets[0].pointRadius[highlightedIndex] = 0;
+                    }
+                    speedChart.data.datasets[0].pointBackgroundColor[index] = 'rgba(255, 99, 132, 1)';
+                    speedChart.data.datasets[0].pointRadius[index] = 6;
+                    highlightedIndex = index;
+                    speedChart.update();
+                }
+
+                // Initialize display and chart
+                updateSpeedDisplay(index);
+                populateSpeedChart();
+
+            } catch (error) {
+                console.error("Error loading speed data:", error);
+            }
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const default_vehicle_id = "bus_24_1158"
+        const vehicle_id = urlParams.get('vehicle_id') ?? "1158"
+        const startTime = urlParams.get('startTime') ?? "2025-03-10 12:00:00"
+        const line = urlParams.get('line') ?? "24"
+        const type = urlParams.get('type') ?? "bus"
+        const disableDepos = urlParams.get('disableDepos') ?? "true"
+        const date = startTime ? startTime.split(" ")[0] : "2025-03-10"
+        fileSelect.options[0].innerHTML = vehicle_id;
+
+        // Call the function to load the coordinates from the file
+        loadCoordinates(vehicle_id, startTime, disableDepos, line);
+        loadRoute(date, line, type)
+    </script>
+</body>
+</html>

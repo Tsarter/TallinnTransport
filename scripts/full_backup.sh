@@ -1,0 +1,1 @@
+pg_basebackup -U postgres -D /home/tanel/Documents/public_transport_project/HardDrive/backup/backup22_04_2025 -Ft -z -P
