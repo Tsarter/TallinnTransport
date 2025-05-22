@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transport Trip Visualizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/deck.gl@8.9.3/dist.min.js"></script>
+    <script src="https://unpkg.com/@deck.gl/mapbox@8.9.3/dist.min.js"></script> 
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div id="current-time" style="position: absolute; top: 10px; left: 10px; background: white; padding: 5px; border-radius: 5px; font-family: Arial, sans-serif; font-size: 14px; z-index: 1000;">
+  Current Time: <span id="time-display"></span>
+</div>
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoidHNhcnRlcjUiLCJhIjoiY21hdG85aWdsMDgwYTJscjM4em14NHN6ZiJ9.md961y5IO76F8ds4ThVONA'; // use public demo one for dev
+
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v11',
+    center: [24.7536, 59.437],
+    zoom: 12
+  });
+
+  const tripsDataUrl = '/api/trips'; // must return format described below
+
+  const MapboxLayer = deck.MapboxLayer;
+
+  console.log('MapboxLayer:', MapboxLayer);
+  map.on('load', () => {
+  fetch(tripsDataUrl)
+    .then(res => res.json())
+    .then(rawTripsData => {
+      alert('Data loaded successfully!');
+      console.log('Trips data:', rawTripsData);
+
+      const originalTime = new Date('2025-04-01T17:01:00+03:00');
+      const referenceEpoch = originalTime.getTime();
+      const miniTrips = [];
+      rawTripsData.forEach(trip => {
+        for (let i = 0; i < trip.path.length - 1; i++) {
+        
+          miniTrips.push({
+            path: [trip.path[i], trip.path[i + 1]],
+            timestamp: [
+              (new Date(trip.timestamps[i]).getTime() - referenceEpoch) / 1000,
+              (new Date(trip.timestamps[i + 1]).getTime() - referenceEpoch) / 1000
+            ],
+            color: getSpeedColor(trip.colors[i])
+          });
+        }
+      });
+      const tripsData = rawTripsData.map(trip => ({
+        ...trip,
+        timestamp: trip.timestamps.map(ts =>
+          (new Date(ts).getTime() - referenceEpoch) / 1000
+        ),
+        colors: trip.colors
+      }));
+
+      const tripsLayer = new MapboxLayer({
+        id: 'trips-layer',
+        type: deck.TripsLayer,
+        data: tripsData,
+        getPath: d => d.path,
+        getTimestamps: d => d.timestamp,
+        getColor: d => [128, 0, 128],
+        currentTime: 0,
+        trailLength: 60,
+        capRounded: true,
+        jointRounded: true,
+        widthMinPixels: 8,
+
+        source: true // Added source property
+      });
+
+      map.addLayer(tripsLayer);
+
+      let time = 0;
+      setInterval(() => {
+        time += 1;
+        // Update the time display every second
+        if (time % 60 === 0) {
+          updateTimeDisplay(originalTime, time);
+        }
+        tripsLayer.setProps({ currentTime: time, getColor: (d, {index}) => d.colors[index] });
+      }, 100);
+    });
+});
+
+function getSpeedColor(speed, avgSpeed = 20) {
+
+            // Normalize the speed to a value between 0 and 1
+            var normalizedSpeed = speed < 5 ? 0 : Math.max(0, Math.min(1, speed  / (avgSpeed * 2)));
+            
+            // Calculate the red, green, and blue components
+            var red, green;
+            if (normalizedSpeed < 0.5) {
+                // Transition from red to yellow
+                red = 255;
+                green = Math.round(510 * normalizedSpeed); // 0 to 255
+            } else {
+                // Transition from yellow to green
+                red = Math.round(255 * (1 - (normalizedSpeed - 0.5) * 2)); // 255 to 0
+                green = 255;
+            }
+            
+            // Return the color as a hex string
+            return [
+                red,
+                green,
+                0
+            ];
+        }
+
+// Function to update the current time display
+function updateTimeDisplay(originalTime, timeCounter) {
+  originalTime.setSeconds(timeCounter);
+  const timeString = originalTime.toLocaleTimeString();
+  document.getElementById('time-display').textContent = timeString;
+}
+
+
+</script>
+</body>
+</html>
