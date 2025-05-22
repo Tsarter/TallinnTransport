@@ -7,8 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
-        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 500; pointer-events: none; }
+        #map { height: 100vh; }
         #controls {
             position: absolute;
             top: 10px;
@@ -17,6 +16,7 @@
             padding: 10px;
             border-radius: 8px;
             z-index: 1000;
+            font-family: sans-serif;
         }
         #timeSliderDiv {
             position: absolute;
@@ -28,13 +28,20 @@
             border-radius: 8px;
             z-index: 1000;
         }
+        .line-number-tooltip {
+            border-radius: 4px;
+            padding: 2px;
+            font-size: 12px;
+            color: black; /* Text color */
+            background-color: #f5deb300;
+            border-width: 0;
+        }
     </style>
 </head>
 <body>
-<div id="map" style="height: 100vh;"></div>
-<canvas id="canvas"></canvas>
+<div id="map"></div>
 <div id="controls">
-    <label>Date: <input type="date" id="startTime"></label><br><br>
+    <label>Date: <input type="date" id="startTime" step="1"></label><br><br>
     <label>Line: <input type="text" id="line"></label><br><br>
     <label>Type:
         <select id="type">
@@ -53,46 +60,44 @@
     <div id="currentTime">Select Time</div>
 </div>
 <script>
+    function adjustSlider(direction) {
+        //const step = document.getElementById("windowSize").value;
+        const step = 1; 
+        const slider = document.getElementById("timeSlider");
+        let newValue = parseInt(slider.value) + parseInt(step) * direction;
+        console.log("New slider value:", newValue);
+        newValue = Math.max(slider.min + 1, Math.min(slider.max - 1, newValue));
+        slider.value = newValue;
+        slider.dispatchEvent(new Event('input')); // Trigger the input event
+    }
+</script>
+<script>
     const map = L.map('map').setView([59.437, 24.7536], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const resizeCanvas = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    };
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
-
     let rawData = [];
-    let timepoints = {};
     let slider = document.getElementById("timeSlider");
     let currentTimeDisplay = document.getElementById("currentTime");
+
+    let timepoints = {};
+    const markerMap = new Map();
     let sorted = [];
-    slider.addEventListener("input", () => {
+    slider.addEventListener("input", function() {
+        let idx = parseInt(slider.value);
         if (rawData.length === 0) {
             currentTimeDisplay.innerText = "No data available";
             return;
         }
-        
-        const selectedIndex = Math.floor(slider.value * sorted.length / 600);
+
+        let selectedIndex = Math.floor(idx * sorted.length / 600);
         if (!sorted[selectedIndex]) {
             currentTimeDisplay.innerText = "Invalid time selection";
             return;
         }
-        const selectedTime = new Date(sorted[selectedIndex].datetime);
+        let selectedTime = new Date(sorted[selectedIndex].datetime);
         currentTimeDisplay.innerText = selectedTime.toLocaleString();
-        updateCanvas(selectedTime);
+        updateMap(selectedTime);
     });
-
-    function adjustSlider(direction) {
-        const step = 1;
-        let newValue = parseInt(slider.value) + direction * step;
-        newValue = Math.max(slider.min + 1, Math.min(slider.max - 1, newValue));
-        slider.value = newValue;
-        slider.dispatchEvent(new Event('input'));
-    }
 
     async function loadPoints() {
         const startDate = document.getElementById("startTime").value;
@@ -100,68 +105,155 @@
             alert("Please select a date.");
             return;
         }
-        const line = document.getElementById("line").value;
-        const type = document.getElementById("type").value;
         const start = `${startDate} 08:00:00`;
         const end = `${startDate} 23:59:59`;
+        const line = document.getElementById("line").value;
+        const type = document.getElementById("type").value;
 
-        const res = await fetch(`/api/points?${new URLSearchParams({ startTime: start, endTime: end, line, type })}`);
+        const params = new URLSearchParams({
+            startTime: start,
+            endTime: end,
+            line,
+            type
+        });
+
+        const res = await fetch(`/api/points?${params}`);
         if (!res.ok) {
             alert("Error loading data");
             return;
         }
         rawData = await res.json();
-        timepoints = {};
-        for (const p of rawData) {
-            if (!timepoints[p.datetime]) timepoints[p.datetime] = [];
-            timepoints[p.datetime].push(p);
-        }
         sorted = rawData.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+        console.log("Raw data loaded:", rawData);
+        for (const p of rawData) {
+            const date = new Date(p.datetime);
+            
+            if (!timepoints[p.datetime]) timepoints[p.datetime] = [];
+
+            const key = `${p.vehicle_id}_${p.datetime}`;
+
+            const iconHtml = `
+                <div style="
+                    background-color: ${getColor(p.speed)};
+                    border-radius: 50%;
+                    width: 16px;
+                    height: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: black;
+                    font-size: 10px;
+                    font-weight: bold;
+                ">
+                    ${p.line}
+                </div>`;
+            const marker = L.marker([p.lat, p.lon], {
+                icon: L.divIcon({
+                    className: "custom-div-icon",
+                    html: iconHtml,
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                })
+            }).bindPopup(`Line: ${p.line}, ID: ${p.vehicle_id}, Dir: ${p.direction}`);
+
+  
+
+            markerMap.set(key, marker);
+            p.key = key;
+
+            timepoints[p.datetime].push(marker);
+        }
+        console.log("Timepoints:", timepoints);
+        
         slider.value = 100;
-        updateCanvas(new Date(end));
+        updateMap(new Date(end));
     }
 
-    function updateCanvas(selectedTime) {
+    let pointLayerGroup = L.layerGroup().addTo(map);
+
+    function updateMap(selectedTime) {
+        console.time("updateMap Total Execution Time");
         const windowSizeMin = parseInt(document.getElementById("windowSize").value);
         let fromTime = new Date(selectedTime.getTime() - windowSizeMin * 60000);
         fromTime.setSeconds(fromTime.getSeconds() + 59);
+        pointLayerGroup.clearLayers();
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        console.log("Selected time:", selectedTime);
+        console.log("From time:", fromTime);
+        console.log("Window size (minutes):", windowSizeMin);
+        console.log("Raw data length:", rawData.length);
+        console.log("Timepoints data length:", Object.keys(timepoints).length);
 
-        for (let datetime in timepoints) {
-            let t = new Date(datetime);
-            if (t >= fromTime && t <= selectedTime) {
-                for (let p of timepoints[datetime]) {
-                    const latlng = L.latLng(p.lat, p.lon);
-                    const point = map.latLngToContainerPoint(latlng);
-                    drawPoint(point.x, point.y, getColor(p.speed), p.line);
-                }
-            }
-        }
+        const filteredTimepoints = Object.keys(timepoints)
+            .filter(key => {
+            const time = new Date(key);
+            return time >= fromTime && time <= selectedTime;
+            })
+            .reduce((obj, key) => {
+            obj[key] = timepoints[key];
+            return obj;
+            }, {});
+        console.timeEnd("Filter Timepoints");
+
+        console.time("Filter Points");
+        const filtered = [];
+        console.log("Filtered timepoints:", filteredTimepoints);
+        Object.values(filteredTimepoints).forEach(markers => {
+            markers.forEach(marker => {
+                pointLayerGroup.addLayer(marker);
+            });
+        });
+        console.timeEnd("Filter Points");
+
+        console.timeEnd("updateMap Total Execution Time");
     }
-
-    function drawPoint(x, y, color, label) {
-        ctx.beginPath();
-        ctx.arc(x, y, 8, 0, 2 * Math.PI);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.font = "10px sans-serif";
-        ctx.fillStyle = "black";
-        ctx.textAlign = "center";
-        ctx.fillText(label, x, y + 3);
-    }
-
     function getColor(speed, avgSpeed = 20) {
-        let norm = speed < 5 ? 0 : Math.max(0, Math.min(1, speed / (avgSpeed * 2)));
-        let red, green;
-        if (norm < 0.5) {
-            red = 255;
-            green = Math.round(510 * norm);
-        } else {
-            red = Math.round(255 * (1 - (norm - 0.5) * 2));
-            green = 255;
+            // Normalize the speed to a value between 0 and 1
+            var normalizedSpeed = speed < 5 ? 0 : Math.max(0, Math.min(1, speed  / (avgSpeed * 2)));
+            
+            // Calculate the red, green, and blue components
+            var red, green;
+            if (normalizedSpeed < 0.5) {
+                // Transition from red to yellow
+                red = 255;
+                green = Math.round(510 * normalizedSpeed); // 0 to 255
+            } else {
+                // Transition from yellow to green
+                red = Math.round(255 * (1 - (normalizedSpeed - 0.5) * 2)); // 255 to 0
+                green = 255;
+            }
+            
+            // Return the color as a hex string
+            return `rgb(${red},${green},0)`;
         }
-        return `rgb(${red},${green},0)`;
+    function getLineColor(str) {
+        // Map beatiful colors for lines 1-80
+        const colors = {
+            1: "#FF0000", 2: "#00FF00", 3: "#0000FF", 4: "#FFFF00",
+            5: "#FF00FF", 6: "#00FFFF", 7: "#FFA500", 8: "#800080",
+            9: "#FFC0CB", 10: "#808080", 11: "#A52A2A", 12: "#5F9EA0",
+            13:"#D2691E", 14: "#FF7F50", 15: "#6495ED", 16: "#FFF8DC",
+            17: "#DC143C", 18: "#00BFFF", 19: "#FF1493", 20: "#B0E0E6",
+            21: "#FF6347", 22: "#4682B4", 23: "#D8BFD8", 24: "#FFD700",
+            25: "#ADFF2F", 26: "#F0E68C", 27: "#E6E6FA", 28: "#FFF0F5",
+            29: "#7FFF00", 30: "#FF4500", 31: "#DA70D6", 32: "#B22222",
+            33: "#FF8C00", 34: "#FFD700", 35: "#ADFF2F", 36: "#7FFF00",
+            37: "#00FF7F", 38: "#00FA9A", 39: "#00CED1", 40: "#4682B4",
+            41: "#5F9EA0", 42: "#7B68EE", 43: "#6A5ACD", 44: "#483D8B",
+            45: "#2F4F4F", 46: "#708090", 47: "#778899", 48: "#B0C4DE",
+            49: "#FF69B4", 50: "#FF1493", 51: "#C71585", 52: "#DB7093",
+            53: "#FFB6C1", 54: "#FF4500", 55: "#FF6347", 56: "#FF7F50",
+            57: "#FF8C00", 58: "#FFA500", 59: "#FFD700", 60: "#FFFF00",
+            61: "#ADFF2F", 62: "#7FFF00", 63: "#32CD32", 64: "#00FF00",
+            65: "#00FA9A", 66: "#00FF7F", 67: "#00CED1", 68: "#20B2AA",
+            69: "#4682B4", 70: "#5F9EA0", 71: "#7B68EE", 72: "#6A5ACD",
+            73: "#483D8B", 74: "#2F4F4F", 75: "#708090", 76: "#778899",
+            77: "#B0C4DE", 78: "#FF69B4", 79: "#FF1493", 80: "#C71585",
+            81: "#FFB6C1", 82: "#FF4500", 83: "#FF6347", 84: "#FF7F50",
+        };
+        // Return the color for the given line number, or a default color if not found
+        return colors[str] || "white";
+   
     }
 </script>
 </body>
