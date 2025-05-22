@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Point Visualizer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+        #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 500; pointer-events: none; }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        #timeSliderDiv {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+<div id="map" style="height: 100vh;"></div>
+<canvas id="canvas"></canvas>
+<div id="controls">
+    <label>Date: <input type="date" id="startTime"></label><br><br>
+    <label>Line: <input type="text" id="line"></label><br><br>
+    <label>Type:
+        <select id="type">
+            <option value="">All</option>
+            <option value="2">Bus</option>
+            <option value="3">Tram</option>
+        </select>
+    </label><br><br>
+    <label>Window Size (minutes): <input type="number" id="windowSize" min="1" max="60" value="1"></label><br><br>
+    <button onclick="loadPoints()">Load</button>
+</div>
+<div id="timeSliderDiv">
+    <button id="decreaseSlider" onclick="adjustSlider(-1)">-</button>
+    <input type="range" id="timeSlider" min="0" max="600" value="100" style="width:400px;">
+    <button id="increaseSlider" onclick="adjustSlider(1)">+</button>
+    <div id="currentTime">Select Time</div>
+</div>
+<script>
+    const map = L.map('map').setView([59.437, 24.7536], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const resizeCanvas = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    };
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    let rawData = [];
+    let timepoints = {};
+    let slider = document.getElementById("timeSlider");
+    let currentTimeDisplay = document.getElementById("currentTime");
+    let sorted = [];
+    slider.addEventListener("input", () => {
+        if (rawData.length === 0) {
+            currentTimeDisplay.innerText = "No data available";
+            return;
+        }
+        
+        const selectedIndex = Math.floor(slider.value * sorted.length / 600);
+        if (!sorted[selectedIndex]) {
+            currentTimeDisplay.innerText = "Invalid time selection";
+            return;
+        }
+        const selectedTime = new Date(sorted[selectedIndex].datetime);
+        currentTimeDisplay.innerText = selectedTime.toLocaleString();
+        updateCanvas(selectedTime);
+    });
+
+    function adjustSlider(direction) {
+        const step = 1;
+        let newValue = parseInt(slider.value) + direction * step;
+        newValue = Math.max(slider.min + 1, Math.min(slider.max - 1, newValue));
+        slider.value = newValue;
+        slider.dispatchEvent(new Event('input'));
+    }
+
+    async function loadPoints() {
+        const startDate = document.getElementById("startTime").value;
+        if (!startDate) {
+            alert("Please select a date.");
+            return;
+        }
+        const line = document.getElementById("line").value;
+        const type = document.getElementById("type").value;
+        const start = `${startDate} 08:00:00`;
+        const end = `${startDate} 23:59:59`;
+
+        const res = await fetch(`/api/points?${new URLSearchParams({ startTime: start, endTime: end, line, type })}`);
+        if (!res.ok) {
+            alert("Error loading data");
+            return;
+        }
+        rawData = await res.json();
+        timepoints = {};
+        for (const p of rawData) {
+            if (!timepoints[p.datetime]) timepoints[p.datetime] = [];
+            timepoints[p.datetime].push(p);
+        }
+        sorted = rawData.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+        slider.value = 100;
+        updateCanvas(new Date(end));
+    }
+
+    function updateCanvas(selectedTime) {
+        const windowSizeMin = parseInt(document.getElementById("windowSize").value);
+        let fromTime = new Date(selectedTime.getTime() - windowSizeMin * 60000);
+        fromTime.setSeconds(fromTime.getSeconds() + 59);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let datetime in timepoints) {
+            let t = new Date(datetime);
+            if (t >= fromTime && t <= selectedTime) {
+                for (let p of timepoints[datetime]) {
+                    const latlng = L.latLng(p.lat, p.lon);
+                    const point = map.latLngToContainerPoint(latlng);
+                    drawPoint(point.x, point.y, getColor(p.speed), p.line);
+                }
+            }
+        }
+    }
+
+    function drawPoint(x, y, color, label) {
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        ctx.fillText(label, x, y + 3);
+    }
+
+    function getColor(speed, avgSpeed = 20) {
+        let norm = speed < 5 ? 0 : Math.max(0, Math.min(1, speed / (avgSpeed * 2)));
+        let red, green;
+        if (norm < 0.5) {
+            red = 255;
+            green = Math.round(510 * norm);
+        } else {
+            red = Math.round(255 * (1 - (norm - 0.5) * 2));
+            green = 255;
+        }
+        return `rgb(${red},${green},0)`;
+    }
+</script>
+</body>
+</html>
