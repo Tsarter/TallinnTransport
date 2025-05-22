@@ -15,9 +15,6 @@
 </head>
 <body>
 <div id="map"></div>
-<div id="current-time" style="position: absolute; top: 10px; left: 10px; background: white; padding: 5px; border-radius: 5px; font-family: Arial, sans-serif; font-size: 14px; z-index: 1000;">
-  Current Time: <span id="time-display"></span>
-</div>
 <script>
   mapboxgl.accessToken = 'pk.eyJ1IjoidHNhcnRlcjUiLCJhIjoiY21hdG85aWdsMDgwYTJscjM4em14NHN6ZiJ9.md961y5IO76F8ds4ThVONA'; // use public demo one for dev
 
@@ -40,8 +37,7 @@
       alert('Data loaded successfully!');
       console.log('Trips data:', rawTripsData);
 
-      const originalTime = new Date('2025-04-01T17:01:00+03:00');
-      const referenceEpoch = originalTime.getTime();
+      const referenceEpoch = new Date('2025-04-01T17:02:00').getTime();
       const miniTrips = [];
       rawTripsData.forEach(trip => {
         for (let i = 0; i < trip.path.length - 1; i++) {
@@ -63,14 +59,14 @@
         ),
         colors: trip.colors
       }));
-
+      console.log('Mini trips data:', miniTrips); 
       const tripsLayer = new MapboxLayer({
         id: 'trips-layer',
         type: deck.TripsLayer,
-        data: tripsData,
+        data: miniTrips,
         getPath: d => d.path,
         getTimestamps: d => d.timestamp,
-        getColor: d => [128, 0, 128],
+        getColor: d => d.color,
         currentTime: 0,
         trailLength: 60,
         capRounded: true,
@@ -85,10 +81,6 @@
       let time = 0;
       setInterval(() => {
         time += 1;
-        // Update the time display every second
-        if (time % 60 === 0) {
-          updateTimeDisplay(originalTime, time);
-        }
         tripsLayer.setProps({ currentTime: time, getColor: (d, {index}) => d.colors[index] });
       }, 100);
     });
@@ -118,14 +110,6 @@ function getSpeedColor(speed, avgSpeed = 20) {
                 0
             ];
         }
-
-// Function to update the current time display
-function updateTimeDisplay(originalTime, timeCounter) {
-  originalTime.setSeconds(timeCounter);
-  const timeString = originalTime.toLocaleTimeString();
-  document.getElementById('time-display').textContent = timeString;
-}
-
 
 </script>
 </body>
