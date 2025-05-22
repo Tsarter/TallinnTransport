@@ -8,9 +8,10 @@ from config import (
     BUS_TIMES_DATA_DIR,
     STOPS_DATA_DIR,
     INTERRUPTIONS_DATA_DIR,
-    DISCORD_WEBHOOK_URL,
     REALTIME_DATA_DIR,
 )
+
+from secret_config import DISCORD_WEBHOOK_URL
 
 
 
