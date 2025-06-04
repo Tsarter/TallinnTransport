@@ -1,0 +1,19 @@
+% Annotatsiooni tekst läheb siia (square brackets should be removed)
+
+Käesoleva töö eesmärk on uurida Tallinna ühistranspordi liikumiskiirusi reaalajas kogutud asukoha andmete põhjal. Seda selleks, et tuvastada aeglasemaid ja kiiremaid sektsioone ühistranspordi võrgustikus. Töö keskendub probleemile, kuidas tõlgendada suurt hulka ruumi- ja ajapõhist andmestikku viisil, mis oleks kasulik lõppkasutajale.  
+
+Töö käigus valmis tarkvaraline lahendus, mis hõlmab andmete kogumist, hoiustamist, töötlemist ja kasutajale kuvamist. Töö tuumaks on PostgreSQL andmebaasisüsteem. Sellele lisati TimescaleDB laiendus, mis võimaldas ajapõhiseid andmeid optimaalsemalt kasutada. Ruumiliste andmete töötlemiseks kasutati PostGIS laiendust. Töö algusega võrreldes suudeti vähendada andmemahtu 90\% ning samal ajal kasvatati päringute kiirusi mitukümmend korda.
+
+Lisaks moodustas suure osa tööst interaktiivse veebirakendus loomine. Peamiste funktsioonidena valmisid kaart liinide aeglaste kohtadega, individuaalse sõiduki kiirus päeva jooksul ja ajakulu leidmine kahe geograafilise punkti vahel. Esimese abil saab kiire ülevaate Tallinna ühistranspordist ja vaadelda tipptunni mõju liikumiskiirusele. Teine on täppistööriist nägemaks konkreetse sõiduki kiirusi iga 30 sekundi tagant. Viimase abil saab analüüsida nii üksikuid liine, mitut liini korraga ja  erinevaid marsruute pidi sõitvaid liine. Lisana arvutati välja 2025 märtsi kõikide liinide, trammide, busside ja üldine keskmine kiirus.
+
+Lahendusel on potentsiaali olla kasuks nii linnaplaneerijale kui ka tavakodanikule, aidates mõlemaid otsuste tegemisel.
+
+Veebilehe avalik aadress on \url{https://tallinn.simplytobo.eu}.
+
+% No need to change this
+Lõputöö on kirjutatud \langEst~keeles ning sisaldab teksti \calculatepages leheküljel, 
+\total{totalchapters} peatükki\ifthenelse{\equal{\totvalue{figure}}{0}}{}{% If no figures, do nothing
+, \total{figure} \ifnum\totvalue{figure}=1 joonis\else joonist\fi%
+}\ifthenelse{\equal{\totvalue{table}}{0}}{}{% If no tables, do nothing
+, \total{table} \ifnum\totvalue{table}=1 tabel\else tabelit\fi%
+}.

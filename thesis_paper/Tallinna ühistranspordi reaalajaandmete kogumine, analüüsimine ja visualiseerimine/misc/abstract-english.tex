@@ -1,0 +1,18 @@
+% Abstract's text goes here (square brackets should be removed)
+The goal of this thesis is to analyze the movement speeds of Tallinn's public transport based on realtime location data, in order to identify slower and faster sections within the transit network. The work addresses the challenge of interpreting large volumes of spatial and time data in a way that is useful to the end user.
+
+During the project, a software solution was developed that includes data collection, storage, processing, and visualization for the user. The core of the system is a PostgreSQL database, enhanced with the TimescaleDB extension for more efficient time-based data handling. For spatial data processing, the PostGIS extension was used. Compared to the initial setup, the volume of data was reduced by 90\%, while query speeds were improved by several orders of magnitude.
+
+As a result, an interactive web application was created. Its main features include: a map highlighting slow sections of transit routes, detailed speed graph of an individual vehicle over the course of a day, and travel time estimation between two geographic points. The first feature provides a quick overview of the city public transport and visualizes the impact of rush hour on transit speed. The second is a precision tool that shows individual vehicle speeds. The third enables analysis of individual lines, multiple lines simultaneously, and routes that traverse different paths. Additionally, the average speed of all lines including trams, buses, and overall was calculated for March 2025.
+
+The solution has the potential to benefit both urban planners and everyday citizens by supporting informed decision making.
+
+Website public domain is \url{https://tallinn.simplytobo.eu}.
+
+% No need to change this
+The thesis is in \langEng~and contains \calculatepages pages of text, 
+\total{totalchapters} chapters\ifthenelse{\equal{\totvalue{figure}}{0}}{}{% If no figures, do nothing
+, \total{figure} \ifnum\totvalue{figure}=1 figure\else figures\fi%
+}\ifthenelse{\equal{\totvalue{table}}{0}}{}{% If no tables, do nothing
+, \total{table} \ifnum\totvalue{table}=1 table\else tables\fi%
+}.

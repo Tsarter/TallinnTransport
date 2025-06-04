@@ -1,0 +1,14 @@
+% NOTE: Appendix 1 is always the non-exclusive licence.
+% Therefore, your appendices need to start from 2.
+
+\clearpage % Forces a page break, ending the current page and starting a new one
+\phantomsection % Creates a section that doesn't produce visible content but is needed for hyperlinks
+\addcontentsline{toc}{chapter}{\appendixTitle~2 -- Ühistranspordi liinide keskmised kiirused märtsis 2025}\label{chapter:appendix-something} % Adds an entry to the table of contents
+\chapter*{\appendixTitle~2 -- Ühistranspordi liinide keskmised kiirused märtsis 2025} % Creates an unnumbered chapter
+\input{appendices/martsiKeskmisedKiirused.tex} % Includes the content of the specified file (appendix-something.tex)
+
+%\clearpage
+%\phantomsection
+%\addcontentsline{toc}{chapter}{\appendixTitle~3 -- Something %Else}\label{chapter:appendix-something-else}
+%\chapter*{\appendixTitle~3 -- Something Else}
+%\input{appendices/appendix-something-else.tex}
