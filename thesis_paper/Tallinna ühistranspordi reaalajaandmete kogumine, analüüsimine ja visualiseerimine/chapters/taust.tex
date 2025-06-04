@@ -28,11 +28,11 @@ Eestis on võimalik GTFS formaadis andmeid saada ühistranspordiregistri kaudu  
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/g2viz.png}
-    \caption{G2VIZ nimelises tööriist, kus on näha ühissõidukite kohta statistikat. Joonise üleval on visualiseeritud on iga tunni kohta keskmine, maksimaalne ja minimaalne kiirus. Kaardil saab näha sõidukite liikumisi. Visualiseerida saab staatilisi andmeid (GTFS) ehk mitte reaalseid liikumisi.}
+    \caption{G2VIZ nimeline tööriist, kus on näha ühissõidukite kohta statistikat.}
     \label{fig:sample}
 \end{figure}
 
-G2VIZ puhul on tegu väga lihtsasti kasutatava veebilehega, kuhu saab üles laadida GTFS formaadis kokkupakitud faili \cite{2024_pt_g2viz}. Veebilehe kasutamine on tasuta, kuid ühe piiranguna on seatud üleslaaditava faili suurus. Maksimaalne suurus on 10 MB, mis näiteks ei võimalda üles laadida Eesti ühistranspordiregistrist saadaolevat faili, kuna selle suurus on rohkem kui 10 MB. Tallinna transpordi lehelt\footnote{\url{https://transport.tallinn.ee/data/gtfs.zip}} allalaaditav fail on kuskil 6 MB suur, kuid selle üleslaadimisel annab lehekülg veateate. Autor on kontakteerunud veebilehe haldajaga, kuid pole vastust saanud.
+G2VIZ puhul on tegu väga lihtsasti kasutatava veebilehega, kuhu saab üles laadida GTFS formaadis kokkupakitud faili \cite{2024_pt_g2viz}. Veebilehe kasutamine on tasuta, kuid ühe piiranguna on seatud üleslaaditava faili suurus. Maksimaalne suurus on 10 MB, mis näiteks ei võimalda üles laadida Eesti ühistranspordiregistrist saadaolevat faili, kuna selle suurus on rohkem kui 10 MB. Tallinna transpordi lehelt allalaaditav fail on kuskil 6 MB suur \cite{transportTallinnEeGTFS}, kuid selle üleslaadimisel annab lehekülg veateate. Autor on kontakteerunud veebilehe haldajaga, kuid pole vastust saanud.
 
 Pärast vea parandamist oleks teoreetiliselt lehel võimalik näha analüütilisi tulemusi maksimaalsete, minimaalsete ja keskmiste kiiruste kohta tundide järgi. Seda küll mitte geograafilise asukohtade järgi, vaid liinigraafiku põhjal. See tähendab ka, et antud rakendus ei arvesta liinivõrgus juhtuda võivate ummikute, õnnetuste ja muu ootamatute olukordade põhjustatud liinigraafikust kõrvalekalletega.
 
@@ -43,7 +43,7 @@ Pikase puhul on tegu ühistranspordi sõiduplaanide koostamise ja koordineerimis
 \begin{figure}[h!]
     \centering
     \includegraphics[width=1\textwidth]{figures/pikasLeedu.jpg}
-    \caption{Analüütiline vaade Pikas süsteemis, kus on kuvatud bussiliini 2G hilinemine peatuste kaupa tööpäeval 3.10.2013 GPS andmete järgi on\cite{merakas_pikas}.}
+    \caption{Analüütiline vaade süsteemis nimega Pikas \cite{merakas_pikas}.}
     \label{fig:pikasLeedu}
 \end{figure}
 
@@ -71,7 +71,7 @@ Eestis on mitmeid reisiplaneerijaid, mis võimaldavad kasutajal näha ühistrans
         \caption{}
         \label{fig:https://gis.ee/tallinn/}
     \end{subfigure}
-    \caption{Tallinnas avalikult kättesaadavad reisiplaneerijad (a) \url{https://web.peatus.ee/} ja (b) \url{https://gis.ee/tallinn/}.}
+    \caption{Reisiplaneerijad (a) \url{https://web.peatus.ee/} ja (b) \url{https://gis.ee/tallinn/}.}
     \label{fig:combined}
 \end{figure}
 
@@ -80,7 +80,7 @@ Joonisel \ref{fig:Peatus.ee} olev veebileht  on lihtsasti kasutatav reisiplaanee
 
 Joonisel \ref{fig:https://gis.ee/tallinn/} olev veebileht on samuti reisiplaneerija, kuid seal on kohe avavaates olemas ka üle terve linna reaalajas liikuvad sõidukid ja iga peatuse juures on lisainfo hilinemiste kohta.
 
-Tallinnal on ka eraldi veebileht \footnote{\url{https://transport.tallinn.ee/}}, kust saab vaadelda reaalajas väljumisi. 
+Tallinnal on ka eraldi veebileht \cite{transportTallinnEe}, kust saab vaadelda reaalajas väljumisi. 
 
 Kõikide reisiplaneerijate puhul on puuduseks see, et rakendused ei ole mõeldud mitte ühistranspordi võrgu analüüsimiseks, vaid hetkeliseks vaatluseks.
 

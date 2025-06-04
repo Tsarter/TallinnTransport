@@ -5,7 +5,7 @@ Töö planeerimisel ei olnud esialgu selge, kuidas täpselt töö valmima peaks.
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.95\textwidth]{figures/struktuur.png}
-    \caption{Arhitektuuriline lahendus, kus andmed kogutakse ja salvestatakse andmebaasi ning kuvatakse veebilehel olevatel alamlehtedel.}
+    \caption{Arhitektuuriline lahendus.}
     \label{fig:Struktuur}
 \end{figure}
 
@@ -86,15 +86,7 @@ Raspberry Pi 4 ja kõvaketas valiti töö jaoks, kuna mõlemad olid autoril enne
 \section{Andmete kogumise skript} % This creates a new section with the title "First Section of the First Chapter."
 Reaalaajaandmete kogumiseks on kirjutatud Pythonis skript, mida haldab \textit{systemd} ja mis käivitatakse \textit{systemctl} käsureatööriista abil teenusena. See võimaldab skripti automaatset käivitamist, tõrgete korral taaskäivitamist ning logide jälgimist.
 
-Staatilisi andmeid kogutakse iga päev kell 04:00. Esialgu koguti andmeid selliselt nagu \url{transport.tallinn.ee} oma enda veebilehe siseseid päringuid tegi, mis tähendas, et osad andmed olid ebastandartsel kujul ja inimesele raskesti arusaadavad. Kõige suuremaid raskusi põhjustas autorile ajagraafiku failist arusaamine (Joonis \ref{fig:Ajagraafikute}), ning autor ei suutnudki seda lõpikult teha. See muutis teisele uurimusküsimusele ("Kui suured on liinil sõitvate sõidukite hilinemised?") vastuse leidmise väga ajanõudvaks. Alles töö lõpus leiti, et samal leheküljel eksisteeris ka paremini arusaadav fail.
-
-
- \begin{figure}[h!]
-    \centering
-    \includegraphics[width=1\textwidth]{figures/arusaamatud andmed.png}
-    \caption{Paar rida raskesti arusaadavast ajagraafikute failist.}
-    \label{fig:Ajagraafikute}
-\end{figure}
+Staatilisi andmeid kogutakse iga päev kell 04:00. Esialgu koguti andmeid selliselt nagu \url{transport.tallinn.ee} oma enda veebilehe siseseid päringuid tegi, mis tähendas, et osad andmed olid ebastandartsel kujul ja inimesele raskesti arusaadavad. Kõige suuremaid raskusi põhjustas autorile ajagraafiku failist \footnote{\url{https://tallinn.simplytobo.eu/transport_data/transport_data/bus_times_data/2025-06-04/routes.txt}} arusaamine, ning autor ei suutnudki seda lõpikult teha. See muutis teisele uurimusküsimusele ("Kui suured on liinil sõitvate sõidukite hilinemised?") vastuse leidmise väga ajanõudvaks. Alles töö lõpus leiti, et samal leheküljel eksisteeris ka paremini arusaadav fail.
  
 Töö lõpus leiti, et \url{transport.tallinn.ee} lehel on olemas GTFS formaadis koht, kust saab heal kujul andmeid, sealhulgas ajagraafikuid. Autor lisas GTFS andmete kogumise loogika.  Selleks tehakse igal hommikul päring päise (\textit{header}) küsimiseks. Kui päises on rida (\textit{Last-Modified}), mis kirjeldab millal viimati andmeid muudetud, on vahepeal uuenenud, siis tehakse uus päring ja laetakse andmed päriselt alla. GTFS fail on  pigem väike (alla 10 MB), kuid hea tava on ikkagi laadida ainult siis, kui vajadus.
 
@@ -116,16 +108,9 @@ Töö algul moodustasid reaalajaandmed 98\% andmemahust. JSON kujul andmeid kogu
 
 Vahepeal katsetati SQLite andmebaasi võimalusi, kuid andmemahud olid seal sama suured ja suuremadki kui samapalju andmeid JSON kujul kaustades. 
 
-Lõpuks jõuti TimescaleDB juurde ja leiti viis seal andmeid optimaalsemalt hoiustada. Joonisel \ref{fig:TimescaleDB} on näha SQL käske, mille sisestamisel muutus andmebaasi suurus 26 GB pealt 2,8 GB peale (9 kuu andmed). Oma olemuselt seati reaalajaandmete hoiustamisel sisse reegel, et peale seitset päeva andmebaasis olemist muudetakse reapõhine andmebaas tulbapõhiseks ja andmete hoiustamine muudetakse optimaalsemaks \cite{timescale_hypercore}. Selle tulemusel oli andmebaasi nüüd võimalik jagada ja internetist alla laadida mõistliku aja piires\footnote{\url{https://tallinn.simplytobo.eu/transport_data/transport_data/realtime_database_copy/}}. Vahepeal katsetati kiiruse lisatulba lisamisega andmebaasile, mille käigus loodi uus andmebaas nullist, ning tehti samad eelpool tehtud käsud. Peale seda oli andmebaas 2,7 GB suur ja sisaldas 10 kuu andmeid. Võrreldes JSON kujul andmete hoiustamisega oli lõplik tulemus 90\% optimaalsem.
+Lõpuks jõuti TimescaleDB juurde ja leiti viis seal andmeid optimaalsemalt hoiustada.  Optimeerimise käigus muutus andmebaasi suurus 26 GB pealt 2,8 GB peale (9 kuu andmed). Oma olemuselt seati reaalajaandmete hoiustamisel sisse reegel, et peale seitset päeva andmebaasis olemist muudetakse reapõhine andmebaas tulbapõhiseks ja andmete hoiustamine muudetakse optimaalsemaks \cite{timescale_hypercore}. Selle tulemusel oli andmebaasi nüüd võimalik jagada ja internetist alla laadida mõistliku aja piires\footnote{\url{https://tallinn.simplytobo.eu/transport_data/transport_data/realtime_database_copy/}}. Vahepeal katsetati kiiruse lisatulba lisamisega andmebaasile, mille käigus loodi uus andmebaas nullist, ning tehti samad eelpool tehtud käsud. Peale seda oli andmebaas 2,7 GB suur ja sisaldas 10 kuu andmeid. Võrreldes JSON kujul andmete hoiustamisega oli lõplik tulemus 90\% optimaalsem.
 
 Kaustades andmete probleem oli ka nendest koopia tegemise ja jagamise aeglus. Ühe kuu andmete allalaadimine võttis kuskil 15 minutit ja 10 kuu puhul tuli arvestada 3 tunniga. TimescaleDB andmebaasiga  võttis aga 10 kuu kohta koopiafaili tegemine 12 minutit ja selle faili allalaadimine võttis 2 minutit. Allalaadimine muutus 99\% kiiremaks (3 tunni pealt 2 minuti peale).
-
-\begin{figure}[H] % h-here, if possible; H-here, definitely; t-top of the page; b-bottom of the page; p-page of floats
-    \centering
-    \includegraphics[width=.8\textwidth]{figures/timescaleDBSQL.png} % Includes an image from the specified path, setting the width to 50% of the text width
-    \caption{TimescaleDB optimeerimise SQL käsud. Sarnased andmed viiakse üksteisele andmebaasis lähemale ehk konkreetse sõiduki asukohad on järjest ning reapõhised andmed muudetakse 7 päeva möödudes tulbapõhisteks. } % Provides a caption for the figure, italicizing the text
-    \label{fig:TimescaleDB} % Sets a label for the figure to be referenced later
-\end{figure}
 
 \section{Kiiruste arvutamine}
 
@@ -133,14 +118,37 @@ Kuigi kohad, kus kiirusi arvutati, on ajas muutunud, on seda üldiselt alati sam
 
 \begin{figure}[h!]
     \centering
-    \includegraphics[width=0.92\textwidth]{figures/Sqlscript.png}
-    \caption{Kiiruste arvutamise lihtsustatud SQL skript. Esimeses osas leitakse igale asukohale sellele järgnev asukoht. Teises osas leitakse nende kahe asukoha ajaline ja vahemaaline vahe. Kolmandas osas leitakse mõlema jagatis ehk kiirus.}
-    \label{fig:kiirusteSQLskript}
+    \scriptsize
+\begin{lstlisting}
+WITH speed_data AS (
+    SELECT
+        datetime,
+        geom,
+        LEAD(geom) OVER (PARTITION BY type,line,vehicle_idORDER BY datetime)
+        AS next_point,
+        LEAD(datetime) OVER (PARTITION BY type, line,vehicle_id ORDER BY datetime)
+        AS next_time
+    FROM realtimedata
+),segment_data AS (
+    SELECT
+        EXTRACT(EPOCH FROM (next_time - datetime)) 
+        AS time_diff_seconds, 
+        ST_Distance(geom::GEOGRAPHY, next_point::GEOGRAPHY) 
+        AS distance_meters
+    FROM speed_data
+    WHERE next_point IS NOT NULL)
+SELECT 
+    (distance_meters / time_diff_seconds) * 3.6 
+    AS speed_kmh 
+FROM segment_data;
+\end{lstlisting}
+\caption{SQL päring sõiduki kiiruse arvutamiseks.}
+\label{fig:kiirusteSQLskript}
 \end{figure}
 
 \section{Andmete visualiseerimine}
 
-Alguses kogunes päevas 2880 reaalajaandmete faili kaustadesse ning andmete visualiseerimiseks tehti skript, mis pani kõik andmed ühte faili ja pakkis kokku. Hiljem skripti kiirust mõõtes selgus, et ühe päeva andmete salvestamiseks kulus 12 minutit. Seejärel veebileht sai teha päringu ja päeva andmed serverist alla laadida. Veebileht kasutab kaardi kuvamiseks Leaflet teeki \footnote{\url{https://leafletjs.com/}}. Antud kaardile lisati seejärel saadud asukohtade koordinaadid. Võimalik oli liikuda ajas edasi ja tagasi ning näha sõidukite liikumisi. Tegu oli lihtsa lehega. Edasiarenduste tegemine oli keeruline, kuna andmetöötlus oli aeganõudev ning halvasti hallatav. Sellegipoolest loodi Joonisel \ref{fig:Kiirustekaart} näha olev leht. Veebilehel kirjutati kood, mis grupeerib aegread aja asemel liini, tüübi ja sõiduki identifikaatori järgi. Seejärel olid andmed korrastatud sõidetud marsruutide järgi. Seda sai visualiseerida graafikul. Kuna bussikiirused kõiguvad väga palju ja andmeid on palju, siis paremaks kuvamiseks on iga andmepunkt nelja eelmise punkti keskmine. Kuigi muu eeltoodu ei ole enam kasutuses, siis see on endiselt alles.
+Alguses kogunes päevas 2880 reaalajaandmete faili kaustadesse ning andmete visualiseerimiseks tehti skript, mis pani kõik andmed ühte faili ja pakkis kokku. Hiljem skripti kiirust mõõtes selgus, et ühe päeva andmete salvestamiseks kulus 12 minutit. Seejärel veebileht sai teha päringu ja päeva andmed serverist alla laadida. Veebileht kasutab kaardi kuvamiseks Leaflet teeki \cite{leafletjs}. Antud kaardile lisati seejärel saadud asukohtade koordinaadid. Võimalik oli liikuda ajas edasi ja tagasi ning näha sõidukite liikumisi. Tegu oli lihtsa lehega. Edasiarenduste tegemine oli keeruline, kuna andmetöötlus oli aeganõudev ning halvasti hallatav. Sellegipoolest loodi Joonisel \ref{fig:Kiirustekaart} näha olev leht. Veebilehel kirjutati kood, mis grupeerib aegread aja asemel liini, tüübi ja sõiduki identifikaatori järgi. Seejärel olid andmed korrastatud sõidetud marsruutide järgi. Seda sai visualiseerida graafikul. Kuna bussikiirused kõiguvad väga palju ja andmeid on palju, siis paremaks kuvamiseks on iga andmepunkt nelja eelmise punkti keskmine. Kuigi muu eeltoodu ei ole enam kasutuses, siis see on endiselt alles.
 
 Andmete TimescaleDB andmebaasi tõstmisel tekkis vajadus serveri järele, mis võtaks vastu veebilehelt tulevad päringud, teeks päringu andmebaasi pihta ja tagastaks andmed. See muutis ka andmetöötluse loogikat. Nüüd toimus kõik SQL päringute kaudu. Endiselt leiti vahemaa kahe punkti vahel ja kulunud aeg. PostGIS andmebaasi laiendus muutis vahemaa leidmise eriti lihtsaks ja kiireks. Samuti võimaldas see välja lõigata liini otstes ja depoodes seismised.
 
@@ -155,7 +163,7 @@ Keerulisem on lugu GNSS asukohtadega, kuna need ei pruugi näidata õiget kohta 
 \begin{figure}[H] % h-here, if possible; H-here, definitely; t-top of the page; b-bottom of the page; p-page of floats
     \centering
     \includegraphics[width=.8\textwidth]{figures/gpsvead.png} % Includes an image from the specified path, setting the width to 50% of the text width
-    \caption{Bussiliini 1 asukoha andmed 16. märts 2025. Viru Keskuse maaaluse peatuse tõttu on sealsed asukohad ebatäpsed. Samuti on osad punktid Narva maantee ääres olevate majade peal. Ilmselt signaali seintelt peegeldumise tõttu.} % Provides a caption for the figure, italicizing the text
+    \caption{Veaga asukohad Kesklinnas.} % Provides a caption for the figure, italicizing the text
     \label{fig:gpsnoise} % Sets a label for the figure to be referenced later 
 \end{figure}
 
@@ -164,7 +172,7 @@ Joonisel \ref{fig:gpsnoise} on näha, et sõidukite asukohad võivad kohati näi
 \begin{figure}[H] % h-here, if possible; H-here, definitely; t-top of the page; b-bottom of the page; p-page of floats
     \centering
     \includegraphics[width=.8\textwidth]{figures/Kurvsirgemaks.png} % Includes an image from the specified path, setting the width to 50% of the text width
-    \caption{Trammiliini 4 marsruudid hobujaama juures. Kurvi pikkus on 170 m, kuid otse minnes 120 m. Trajektoorid ei jälgi täpselt kurvi, vaid lõikavad seda sirgemaks. Keskmiste kiiruste arvutamisel tuleb siit viga.} % Provides a caption for the figure, italicizing the text
+    \caption{Trajektoorid lõikavad kurvi sirgemaks.} % Provides a caption for the figure, italicizing the text
     \label{fig:kurvsirgeks} % Sets a label for the figure to be referenced later
 \end{figure}
 

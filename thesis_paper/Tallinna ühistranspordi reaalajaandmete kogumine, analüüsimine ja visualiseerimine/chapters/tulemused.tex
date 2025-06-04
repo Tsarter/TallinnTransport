@@ -1,4 +1,4 @@
-Töö tulemusena valmis avalikult kättesaadav veebirakendus, mis on nähtav aadressilt \url{https://tallinn.simplytobo.eu}. Veebilehel valmis töö lõpuks mitu alamlehte. Töö kood on kättesaadav aadressilt \url{https://github.com/Tsarter/TallinnTransport}.
+Töö tulemusena valmis avalikult kättesaadav veebirakendus \footnote{\url{https://tallinn.simplytobo.eu}}. Veebilehel valmis töö lõpuks mitu alamlehte. Töö lähtekood on avalikult kättesaadav. \footnote{\url{https://github.com/Tsarter/TallinnTransport}}
 
 \section{Avalik andmebaas}
 
@@ -11,13 +11,13 @@ Pilte, kus kuvatud kiiruseid linnakaardil, on loodud näiteks Bostoni \cite{bost
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/speedSegmentMap2.png}
-    \caption{Kiirusi kuvav kaart koos mitme filtriga. Aeglasemad kiirused on punased ja kiiremad rohelised. }
+    \caption{Kiirusi kuvav kaart. }
     \label{fig:Kiirustekaart}
 \end{figure}
 
 Joonisel \ref{fig:Kiirustekaart} on näha tallinna ühistranspordi sõidukite kiirusi neljandal aprillil aastal 2025 kella 17:00 - 18:00 vahel. Veebilehe kasutajal on võimalik valida kuupäev ja kellaaeg ning mitme tunni andmeid soovitakse näha. Aitamaks paremini näha aeglaseid kohti on võimalik välja filtreerida segmente kiiruse järgi. Soovides vaadelda konkreetset liini on seda võimalik teha sisestades vastava liini sümboli vastavasse kasti. Valides ka sõidukitüübi, saab tulemuse veelgi täpsemaks ja kuigi 1.november 2024 kadusid liinidelt trollid on antud rakenduses nende valimise võimalus olemas, kuna andmeid hakati koguma varem \cite{trollid}. Viimase võimalusena on võimalik välja jätta kõik segmendid, mis on ühistranspordi peatuste lähedal. Kasutaja saab sisestada numbri meetrites, mille järel ei näidata segmente, mis on lähemal. See aitab paremini näha fooride ja ristmike juures olevaid aeglaseid kohti. Andmete laadimiseks tuleb vajutada nuppu, mille järel saab näha kui palju andmeid laeti ja kui kiiresti.
 
-Kollasega on segmendid, mille kiirus on 20 km/h lähedal. Seda kuna Tabeli \ref{tab:keskmisedMartsis} andmetel on see ühissõidukite keskmine kiirus. Punasega on sellest allpool olevad kiirused ja rohelisega sellest ülevalpool olevad kiirused.
+Kollasega on segmendid, mille kiirus on 20 km/h lähedal. Seda kuna Lisa 2 andmetel on see ühissõidukite keskmine kiirus. Punasega on sellest allpool olevad kiirused ja rohelisega sellest ülevalpool olevad kiirused.
 
 Igale kaardil olevale segmendile saab vajutada, et näha lisainformatsiooni. Selleks on kiirus, liin ja sõiduki identifikaator ning veelgi täpsemalt saab informatsiooni teada, kui vajutada nupule, kus on kirjas \textit{View Speed Graph}.
 
@@ -28,7 +28,7 @@ Nägemaks paremini, kuidas kiirused päeva lõikes ühel liinil muutuvad, loodi 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/speedgraphDepos.png}
-    \caption{Ühe sõiduki ühe päeva kiiruste graafik ja vastav kaart. Kaardil asub sõiduk (sinine täpp) Järvevana teel, graafikul (punane täpp) on näha, et sõiduk liigub keskmisest suurema kiirusega.}
+    \caption{Ühe sõiduki ühe päeva kiiruste graafik ja vastav kaart.}
     \label{fig:KiirusedGraafik}
 \end{figure}
 
@@ -43,7 +43,7 @@ Saamaks paremat arusaama, kui kaua võtab aega ühistranspordil ühest kohast te
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/Liin1VsLiin2V2.png}
-    \caption{Punkti A ja punkti B vahel liikunud sõidukite statistika. Iga liini ja suuna keskmiselt, maksimaalselt ja minimaalselt kulunud aeg on kuvatud.}
+    \caption{Punkti A ja punkti B vahel liikunud sõidukite statistika.}
     \label{fig:Liin1VsLiin2V2}
 \end{figure}
 
@@ -52,7 +52,7 @@ Võimalik on kaardile panna kaks ringi. Punane ring märgib punkti A ja sinine p
 
 \section{Tallinna ühistranspordi keskmine kiirus}
 
-Joonisel \ref{fig:KiirusedGraafik} on näha punast keskmise kiiruse joont. Selle info saab kätte iga liini kohta. Seda teadmist kasutades arvutati välja 2025. aasta märtsi sõidukite keskmised kiirused, mis on toodud välja Tabelis \ref{tab:keskmisedMartsis}.
+Joonisel \ref{fig:KiirusedGraafik} on näha punast keskmise kiiruse joont. Selle info saab kätte iga liini kohta. Seda teadmist kasutades arvutati välja 2025. aasta märtsi sõidukite keskmised kiirused, mis on toodud välja Lisas 2.
 
 Päringu tegemine võttis aega 20 minutit ja on seega aeglasema poolne. Autor on katsetanud eraldi tabeli tegemist taoliste päringute jaoks, mille tulemusel tehti sama päring alla sekundi. Kahjuks pole see lõplikult valmis ja on plaanis valmis teha tulevikus. Seetõttu pole keskmiste kiiruste infot ka avalikul veebilehel.
 
@@ -60,7 +60,7 @@ Katsetati ka muude päringute tegemist. Joonisel \ref{fig:nadalaKeskmine} on nä
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/Kiirused5toopaeva2puhke.png}
-    \caption{Kõikide ühissõidukite keskmiste kiiruste graafik ühe nädala vaates kellaaegade 05:00 kuni 23:59 vahel (2025/03/10 - 2025/03/16). Tööpäeva tipptundidel on kiirused aeglasemad, nädalavahetusel on kiirused üldiselt suuremad.}
+    \caption{Kõikide ühissõidukite keskmiste kiiruste graafik ühe nädala vaates.}
     \label{fig:nadalaKeskmine}
 \end{figure}
 
@@ -104,7 +104,7 @@ Käsitsi arvutamise järgi kulus 94,2 km läbimiseks 6 tundi ja 27 minutit. Kesk
 Tegu on umbes 4 protsendilise erinevusega. Tegu ei ole suure eksimusega, kuid siiski on erinevus olemas. Nii automaatse skriptiga kui käsitsi saadud tulemused erinesid 2 minuti võrra ehk inimvea piires. 
 Vahemaa erines 3,5 kilomeetriga. Seda mõningast viga võib põhjustada asjaolu, et asukohaandmed pole päris täpsed ehk kurvid võetakse sirgemaks. Joonisel \ref{fig:KiirusedGraafik} oleva tööriista järgi vaadeldi kurve. Näiteks Joonisel \ref{fig:kurvsirgeks} on viga kuskil 50 m. Arvestades, et tramm sõitis edasi-tagasi 12 korda, siis halvimal juhul tekkis ühes kurvis viga umbes 500 m. Trammiliinil 4 on kolm järsemat kurvi peatuste Lubja, Majaka ja Hobujaama lähedal, lisaks mitmeid laugemaid. Ehk 90 km peale võis sealt tekkida arvestatav viga. Selle lahendamiseks saaks asukohad tõsta teadaoleva marsruudi peale \cite{buenosAires}. Kahjuks jääb see töö mahust välja ja autor lepib teatud veaga kurvide arvutamisel.  
 
-Järgnevalt valideeriti veel nelja erineva bussiliini andmeid. Tabelis \ref{tab:keskmisedMartsis} on välja arvutatud 2025. aasta märtsi liinide liikumiskiirused. Selle abil valiti kõige kiirem bussiliin ehk 38, kõige aeglasem ehk 2 ja lisaks valiti ekspressliin 9, mille marsruut paistis ilma suuremate kurvideta. Bussiliin 81 valiti, kuna oli eelnevalt trolliliin.
+Järgnevalt valideeriti veel nelja erineva bussiliini andmeid. Lisas 2 on välja arvutatud 2025. aasta märtsi liinide liikumiskiirused. Selle abil valiti kõige kiirem bussiliin ehk 38, kõige aeglasem ehk 2 ja lisaks valiti ekspressliin 9, mille marsruut paistis ilma suuremate kurvideta. Bussiliin 81 valiti, kuna oli eelnevalt trolliliin.
 
 \begin{longtable}{|l|c|c|c|c|c|c|}
 \caption{Tulemuste valideerimine valitud sõidukite põhjal. Number 1 märgistab automaatse skripti tulemusi ja number 2 käsitsi valideerimisel saadud tulemusi. }
@@ -127,4 +127,4 @@ Liinide puhul esineb arvestav arv olukordi, kus depoost või depoosse sõitu ei 
 
 Bussiliini 38 puhul tuli viga kõige suurem, mis on tõenäoliselt seotud kurvilise ja kiire marsruudiga Pirita ja Viimsi teedel. Bussiliini 9 puhul tuli viga kõige väiksem ja see on ilmselt kuna Lasnamäelt Mustamäele sõidul pole järske kurve. 
 
-Kuid üldpildis on kõik tulemused väga lähedal Tabelis \ref{tab:keskmisedMartsis} leitud kiirustele. Kiiremad sõidukid ongi kiiremad ja aeglasemad aeglasemad. Seega peab autor leitud kiirusi õigeks, kuid paar protsenti liiga aeglaseks.
+Kuid üldpildis on kõik tulemused väga lähedal Lisas 2 leitud kiirustele. Kiiremad sõidukid ongi kiiremad ja aeglasemad aeglasemad. Seega peab autor leitud kiirusi õigeks, kuid paar protsenti liiga aeglaseks.
