@@ -7,3 +7,5 @@ proxy
 *.log
 report.html
 node/gif_maker_for/images/
+secret_*
+**/cache/

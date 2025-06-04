@@ -363,7 +363,7 @@
             currentUrl.searchParams.set('mapCenterLat', mapCenterLat);
             currentUrl.searchParams.set('mapCenterLng', mapCenterLng);
             
-            window.history.replaceState(null, '', currentUrl);
+            window.history.replaceState({}, '', currentUrl);
             return;
         }
         // Fetch data from server and display on the map
@@ -386,11 +386,14 @@
                 if (layer instanceof L.GeoJSON) {
                 map.removeLayer(layer);
                 }
+                if (layer instanceof L.Circle) {
+                    map.removeLayer(layer);
+                }
             });
 
             data.forEach(row => {
                 const {line, segment, speed_kmh, vehicle_id, type } = row;
-
+                
                 // Parse GeoJSON directly
                 const geojson = JSON.parse(segment);
 
@@ -398,20 +401,47 @@
                 //const color = speed_kmh > 30 ? 'green' : speed_kmh > 15 ? 'orange' : 'red';
                 const color = getColor(speed_kmh);
                 //console.log("zoom", map.getZoom());
-                // Add the GeoJSON as a layer
-                L.geoJSON(geojson, {
-                style: {
-                    color,
-                    weight: 6,
-                    opacity: 0.7
+                showPoints = false
+                if (showPoints) {
+                    // Add a circle marker for each point
+                    L.circle([lat, lon], {
+                        radius: 7, // Radius in meters
+                        fillColor: color,
+                        fillOpacity: 0.9,
+                        color: null // No border
+                    })
+                    .addTo(map)
+                    .bindPopup(`Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}`);
+
+                    // Add an arrow marker to indicate direction
+                    const arrowLatLngs =
+                        [
+                            lat + 0.00005 * Math.cos((direction ) * Math.PI / 180),
+                            lon + 0.00005 * Math.sin((direction ) * Math.PI / 180)
+                        ]
+                    L.circle(arrowLatLngs, {
+                        color: "blue",
+                        radius: 2,
+                        opacity: 0.9,
+                        color: null
+                    }).addTo(map);
+                } else {
+
+                    // Add the GeoJSON as a layer
+                    L.geoJSON(geojson, {
+                    style: {
+                        color,
+                        weight: 6,
+                        opacity: 0.7
+                    }
+                    }
+                    ).addTo(map)
+                    .bindPopup(`
+                        Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}
+                        <br>
+                        <button onclick="redirectToSpeedGraph('${line}', '${vehicle_id}', '${type}')">View Speed Graph</button>
+                    `);
                 }
-                }
-                ).addTo(map)
-                .bindPopup(`
-                    Speed: ${speed_kmh.toFixed(2)} km/h, line: ${line}, id: ${vehicle_id}
-                    <br>
-                    <button onclick="redirectToSpeedGraph('${line}', '${vehicle_id}', '${type}')">View Speed Graph</button>
-                `);
             });
             console.log("data loaded");
 

@@ -107,7 +107,7 @@ function validateParams(query) {
 }
 
 // Define a GET endpoint to query the table
-app.get("/speedsegments", async (req, res) => {
+app.get("/speedsegments", tempCacheMiddleware(60),async (req, res) => {
   try {
     console.log(req.query);
     const isValidRes = validateParams(req.query);
@@ -150,7 +150,7 @@ app.get("/speedsegments", async (req, res) => {
         query = `${speed_data}), ${segment_data} ${select_data};`;
       }
 
-      //console.log(query);
+      console.log(query);
       // Execute the query
       const result = await pool.query(query);
       res.json(result.rows);
@@ -164,7 +164,37 @@ app.get("/speedsegments", async (req, res) => {
   }
 });
 
-app.get("/speedgraph", async (req, res) => {
+app.get("/points", tempCacheMiddleware(60),async (req, res) => {
+  try {
+    const isValidRes = validateParams(req.query);
+    if (isValidRes !== "") {
+      console.log(isValidRes);
+      return res.status(400).json({ error: isValidRes });
+    }
+    const { type, line, startTime, endTime, maxSpeed } = req.query;
+
+    if (!startTime || !endTime) {
+      return res.status(400).send("Missing required params");
+    }
+
+    let select = getQuery("points", "points.sql");
+    select += `datetime BETWEEN '${startTime}' AND  '${endTime}' `;
+    select += line ? ` AND line = '${line}' ` : "";
+    select += type ? ` AND type = ${type} ` : "";
+    select += maxSpeed ? ` AND speed_kmh < ${maxSpeed}` : "";
+
+    const query = `${select};`;
+    console.log(query);
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error querying the database:", err);
+    res.status(500).send("Internal Server Error");
+  }
+}
+);
+
+app.get("/speedgraph", tempCacheMiddleware(60), async (req, res) => {
   const isValidRes = validateParams(req.query);
   if (isValidRes !== "") {
     console.log(isValidRes);
@@ -203,7 +233,7 @@ app.get("/speedgraph", async (req, res) => {
   }
 });
 
-app.get("/gridspeeds", async (req, res) => {
+app.get("/gridspeeds",cacheMiddlewarePersistent(), async (req, res) => {
   const isValidRes = validateParams(req.query);
   if (isValidRes !== "") {
     console.log(isValidRes);
@@ -233,7 +263,7 @@ app.get("/gridspeeds", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-app.get("/stops", async (req, res) => {
+app.get("/stops", cacheMiddlewarePersistent(), async (req, res) => {
   try {
     let select = getQuery("stops", "stops.sql");
     const query = `${select}`;
@@ -273,7 +303,103 @@ app.get("/loc_to_loc", async (req, res) => {
   }
 });
 
+app.get("/trips",cacheMiddlewarePersistent(), async (req, res) => {
+  try {
+    const isValidRes = validateParams(req.query);
+    if (isValidRes !== "") {
+      console.log(isValidRes);
+      return res.status(400).json({ error: isValidRes });
+    }
+    let query = getQuery("trips", "trips.sql");
+    console.log(query);
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error querying the database:", err);
+    res.status(500).send("Internal Server Error");
+  }
+}
+);
+    
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
+
+
+/**
+ * Persistent cache for latest request per endpoint.
+ * Caches the latest response to a file and serves it for identical requests.
+ */
+
+const CACHE_DIR = path.join(__dirname, "cache");
+
+// Ensure cache directory exists
+if (!fs.existsSync(CACHE_DIR)) {
+  fs.mkdirSync(CACHE_DIR);
+}
+
+function getCacheFilePath(key) {
+  // Use a hash or base64 to avoid invalid filename chars
+  const safeKey = Buffer.from(key).toString("base64");
+  return path.join(CACHE_DIR, safeKey + ".json");
+}
+
+function cacheMiddlewarePersistent() {
+  return (req, res, next) => {
+    const key = req.originalUrl;
+    const filePath = getCacheFilePath(key);
+
+    // Try to serve from file cache
+    if (fs.existsSync(filePath)) {
+      try {
+        const cached = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        return res.json(cached.data);
+      } catch (e) {
+        // If cache is corrupted, ignore and proceed
+      }
+    }
+
+    // Monkey-patch res.json to store response in file cache
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+      try {
+        fs.writeFileSync(filePath, JSON.stringify({ data, timestamp: Date.now() }));
+      } catch (e) {
+        // Ignore write errors
+      }
+      return originalJson(data);
+    };
+    next();
+  };
+}
+
+/**
+ * Temporary in-memory cache for latest request per endpoint.
+ * Caches the latest response in memory and serves it for identical requests.
+ * Accepts a TTL (time-to-live) in seconds.
+ */
+
+const tempCache = {};
+
+/**
+ * @param {number} ttlSeconds - Time to live in seconds (default: 60 seconds)
+ */
+function tempCacheMiddleware(ttlSeconds = 60) {
+  const ttl = ttlSeconds * 1000;
+  return (req, res, next) => {
+    const key = req.originalUrl;
+
+    if (tempCache[key] && (Date.now() - tempCache[key].timestamp < ttl)) {
+      return res.json(tempCache[key].data);
+    }
+
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+      tempCache[key] = { data, timestamp: Date.now() };
+      return originalJson(data);
+    };
+    next();
+  };
+}

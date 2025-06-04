@@ -19,8 +19,7 @@
     </style>
 </head>
 <body>
-    <h3>Warning this is an experimental website</h3>
-    <p>For any questions, email <a href="mailto:simplytobo@gmail.com">simplytobo@gmail.com</a></p>
+    <h3>Data visulizations about Tallinn public transport</h3>
     <div class="card-container">
         <div class="card">
             <h2>Segment Speeds</h2>
@@ -34,7 +33,7 @@
         </div>
         <div class="card">
             <h2>Speed Graph</h2>
-            <p>Speeds for one vehicle is shown for whole day on a graph.<br> Its recommended to first open segment speeds and them click on a segment and then this view opens up</p>
+            <p>Speeds for one vehicle is shown for whole day on a graph.<br> Its recommended to first open segment speeds and then click on a segment and then this view opens up</p>
             <button onclick="window.location.href='speedgraph/speedgraph.html'">Limited functionality</button>
         </div>
         <div class="card">
@@ -43,14 +42,23 @@
             <button onclick="window.location.href='fromAtoB/fromAtoB.html'">Limited functionality</button>
         </div>
     </div>
+    <h3>Feature Showcase</h3>
     <div class="showcase-section">
-        <h3>Segment speeds</h3>
-        <div id="segment-speeds-img"></div>
+        <a href="/trips/trips.html"><h4>Vehicles moving</h4></a>
+        <iframe src="https://tallinn.simplytobo.eu/trips/trips.html" width="80%" height="500" style="border:none; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></iframe>
     </div>
     <div class="showcase-section">
-        <h3>Grid speeds</h3>
-        <div id="gridspeeds-img"></div>
+        <h4>Segment speeds</h4>
+        <iframe src="https://tallinn.simplytobo.eu/speeds_by_segments/segment_speeds.html?startHour=17&tws=1&startTime=2025-06-03+17%3A00%3A00&cleanUi=true&endTime=2025-06-03+18%3A00%3A00&line=&maxSpeed=5&type=&disStops=&mapCenterLat=59.437000&mapCenterLng=24.75300" 
+        width="80%" height="500" style="border:none; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></iframe>
+        <!-- <div id="segment-speeds-img"></div> -->
     </div>
+    <div class="showcase-section">
+        <h4>Grid speeds</h4> 
+         <iframe src="https://tallinn.simplytobo.eu/gridspeeds/gridspeeds.html" width="80%" height="500" style="border:none; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></iframe>
+       <!--  <div id="gridspeeds-img"></div> -->
+    </div>
+    <p>For any questions, email <a href="mailto:simplytobo@gmail.com">simplytobo@gmail.com</a></p>
     <style>
         .showcase-section {
             display: flex;
@@ -72,6 +80,15 @@
             width: 80%;
             height: 80%;
             background-image: url('/assets/segmentspeeds.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #vehicles-moving-gif {
+            width: 80%;
+            height: 80%;
+            background-image: url('/assets/koikvideo.gif');
             background-size: cover;
             background-position: center;
             border-radius: 8px;
