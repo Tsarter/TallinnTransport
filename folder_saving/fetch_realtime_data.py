@@ -23,11 +23,12 @@ from iaib.folder_saving.data_to_timescaledb import save_to_database
 
 def fetch_realtime_data(file_type="json", url=REALTIME_URL):
     response = requests.get(url)
-    timestamp = datetime.now().strftime("%H-%M-%S")
-    folder_path = f'{REALTIME_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
-    os.makedirs(folder_path, exist_ok=True)
-    with open(f"{folder_path}/{timestamp}.{file_type}", "w", encoding="utf-8") as file:
-        file.write(response.text)
+    #timestamp = datetime.now().strftime("%H-%M-%S")
+    # Save to files
+    # folder_path = f'{REALTIME_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
+    # os.makedirs(folder_path, exist_ok=True)
+    # with open(f"{folder_path}/{timestamp}.{file_type}", "w", encoding="utf-8") as file:
+    #    file.write(response.text)
     
     # Save to database
     if file_type == "txt":
