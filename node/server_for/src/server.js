@@ -278,16 +278,20 @@ app.get("/loc_to_loc", async (req, res) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) {
       return res.status(400).send("lat1, lon1, lat2 and lon2 are required");
     }
-    let points = `WITH point_a AS (
-        SELECT ST_SetSRID(ST_MakePoint(${lon1},${lat1} ), 4326)::geography AS geom
-      ),
+    let points = `
+    WITH 
+      point_a AS (
+        SELECT ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography AS geom
+        ),
       point_b AS (
-        SELECT ST_SetSRID(ST_MakePoint(${lon2},${lat2}), 4326)::geography AS geom
-      )`;
+        SELECT ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography AS geom
+        
+    )`;
     let select = getQuery("loc_to_loc", "loc_to_loc.sql");
     const query = `${points} ${select}`;
+    const bindings = [lon1, lat1, lon2, lat2];
     console.log(query);
-    const result = await pool.query(query);
+    const result = await db.raw(query, bindings);
     res.json(result.rows);
   } catch (err) {
     console.error("Error querying the database:", err);
