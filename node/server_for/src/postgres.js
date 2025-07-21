@@ -5,7 +5,7 @@ require("dotenv").config({path: path.join(__dirname, "../.env")});
 const knex = require('knex');
 
 const db = knex({
-  client: 'pg',
+  client: 'postgresql',
   connection: {
     host: process.env.POSTGRES_HOST || '127.0.0.1',
     port: process.env.POSTGRES_PORT || 5432,

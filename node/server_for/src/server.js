@@ -296,6 +296,13 @@ app.get("/loc_to_loc", async (req, res) => {
 });
 
 app.get("/trips",cacheMiddlewarePersistent(), async (req, res) => {
+
+  const filters = {
+    startDate: '2025-04-02 15:00:00',
+    endDate: '2025-04-02 19:00:00',
+    // line: '3', // optional
+    // type: '3' // optional
+  };
   try {
     const isValidRes = validateParams(req.query);
     if (isValidRes !== "") {
@@ -303,8 +310,22 @@ app.get("/trips",cacheMiddlewarePersistent(), async (req, res) => {
       return res.status(400).json({ error: isValidRes });
     }
     let query = getQuery("trips", "trips.sql");
+    const values = [filters.startDate, filters.endDate];
+    
+    if (filters.line) {
+      query += ' AND line = ?';
+      values.push(filters.line);
+    }
+    if (filters.type) {
+      query += ' AND type = ?';
+      values.push(filters.type);
+    }
+    
+    query += ' GROUP BY vehicle_id, type, line';
+    
+    const result = await db.raw(query, values);
+
     console.log(query);
-    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
     console.error("Error querying the database:", err);
