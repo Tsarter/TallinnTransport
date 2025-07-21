@@ -16,7 +16,7 @@ const db = require('./postgres');
 // Create an Express application
 const app = express();
 app.use(cors());
-const port = 3001;
+const port = 3000;
 
 function getQuery(type, filename) {
   return fs.readFileSync(
@@ -120,30 +120,44 @@ app.get("/speedsegments", tempCacheMiddleware(60),async (req, res) => {
       let select_data = getQuery("segment", "select_data.sql");
       let not_within_stop = getQuery("segment", "not_within_stop.sql");
 
-      // Add the last line dynamically
-      speed_data += `datetime BETWEEN '${startTime}' AND  '${endTime}' `;
-      speed_data += line ? ` AND line = '${line}' ` : "";
-      speed_data += type ? ` AND type = ${type} ` : "";
-      speed_data += `AND NOT EXISTS (
-      SELECT 1
-      FROM depos
-      WHERE ST_Within(geom::geometry, depos.location::geometry)
-  )`;
+      let whereClause = `datetime BETWEEN ? AND ?`;
+      const bindings = [startTime, endTime];
 
-      select_data += maxSpeed ? ` AND speed_kmh < ${maxSpeed}` : "";
-
-      let query = "";
-      if (disStops) {
-        not_within_stop += disStops ? ` ${disStops}` : "";
-        query = `${speed_data}), ${segment_data} ${select_data} ${not_within_stop}));`;
-      } else {
-        // Combine all parts of the query
-        query = `${speed_data}), ${segment_data} ${select_data};`;
+      if (line) {
+        whereClause += ` AND line = ?`;
+        bindings.push(line);
       }
 
-      console.log(query);
+      if (type) {
+        whereClause += ` AND type = ?`;
+        bindings.push(type);
+      }
+
+      // Always exclude measurments in depos
+      whereClause += `
+        AND NOT EXISTS (
+          SELECT 1
+          FROM depos
+          WHERE ST_Within(geom::geometry, depos.location::geometry)
+        )
+      `;
+      if (maxSpeed) {
+        select_data += ` AND speed_kmh < ?`;
+        bindings.push(maxSpeed);
+      }
+      if (disStops) {
+        bindings.push(disStops);
+      }
+      let fullQuery = `
+        ${speed_data} ${whereClause} ),
+        ${segment_data}
+        ${select_data}
+        ${disStops ? not_within_stop : ';'}
+      `;
+
+      console.log(fullQuery);
       // Execute the query
-      const result = await pool.query(query);
+      const result = await db.raw(fullQuery, bindings);
       res.json(result.rows);
     } catch (err) {
       console.error("Error querying the database:", err);
@@ -176,7 +190,7 @@ app.get("/points", tempCacheMiddleware(60),async (req, res) => {
 
     const query = `${select};`;
     console.log(query);
-    const result = await pool.query(query);
+    const result = await db.raw(query);
     res.json(result.rows);
   } catch (err) {
     console.error("Error querying the database:", err);
@@ -206,17 +220,25 @@ app.get("/speedgraph", tempCacheMiddleware(60), async (req, res) => {
 
     let select = getQuery("speedgraph", "speedgraph.sql");
     let calculatins = getQuery("speedgraph", "speed_calculations.sql");
-    select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}' AND line = '${line}'`;
+    let whereClause = `
+      vehicle_id = ?
+      AND datetime >= ?
+      AND datetime < ?
+      AND line = ?
+    `;
+
+    const bindings = [vehicle_id, startTime, endTime, line];
+
     if (disableDepos === "true") {
-      select += ` AND NOT EXISTS (
+      whereClause += ` AND NOT EXISTS (
         SELECT 1
         FROM depos
         WHERE ST_Within(realtimedata.geom::geometry, depos.location::geometry)
       )`;
     }
-    const query = `${select} ), ${calculatins}`;
+    const query = `${select}  ${whereClause} ), ${calculatins}`;
     console.log(query);
-    const result = await pool.query(query);
+    const result = await db.raw(query, bindings);
     res.json(result.rows);
   } catch (err) {
     console.error("Error querying the database:", err);
@@ -247,7 +269,7 @@ app.get("/gridspeeds",cacheMiddlewarePersistent(), async (req, res) => {
     // select += `vehicle_id = '${vehicle_id}' AND datetime >= '${startTime}' AND datetime < '${endTime}'`;
     const query = `${select}`;
     console.log(query);
-    const result = await pool.query(query);
+    const result = await db.raw(query);
     res.json(result.rows);
   } catch (err) {
     console.error("Error querying the database:", err);
