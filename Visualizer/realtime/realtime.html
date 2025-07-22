@@ -33,52 +33,78 @@
       const textMarkers = {};
 
       function fetchData() {
-        fetch("https://tallinn.simplytobo.eu/proxy/readfile.php?name=gps.txt")
-          .then((res) => res.text())
+        console.log("Fetching data...");
+        console.log("Current time:", new Date().toLocaleTimeString());
+        fetch(`/proxy/gps`)
+          .then((res) => res.json())
           .then((data) => {
-            const lines = data.trim().split("\n");
-
             const seen = new Set();
-            console.log("lines", lines);
 
-            lines.forEach((line) => {
-              const [
+            data.features.forEach((feature) => {
+              const {
+                id: vehicleId,
                 type,
-                lineNum,
-                lon,
-                lat,
-                ,
+                line: lineNum,
                 direction,
-                vehicleId,
-                ,
-                tripId,
                 destination,
-              ] = line.split(",");
+              } = feature.properties;
+
+              const [lon, lat] = feature.geometry.coordinates;
 
               const key = `${type}-${vehicleId}`;
               seen.add(key);
 
-              const latNum = parseFloat(lat) / 1e6;
-              const lonNum = parseFloat(lon) / 1e6;
+              const latNum = lat;
+              const lonNum = lon;
 
               const label = `${
                 type == "3" ? "Tram" : "Bus"
               } ${lineNum} → ${destination}`;
 
-              const iconType = type == "3" ? "Tram" : "Bus";
+              const iconType =
+                type == "3" ? "Tram" : type == "10" ? "Train" : "Bus";
               const vehicleIcon = L.divIcon({
-                html: `<img src="../assets/${iconType}Icon.svg" style="width: 24px; height: 24px; transform: rotate(${direction}deg);" />`,
+                html: `<img src="../assets/${iconType}Icon.svg" style="width: 24px; height: 24px; transform: rotate(${direction}deg); transition: transform 1s ease;" />`,
                 className: "",
                 iconSize: [24, 24],
                 iconAnchor: [12, 12],
               });
-              if (markers[key]) {
-                markers[key].setLatLng([latNum, lonNum]).setIcon(vehicleIcon);
-                markers[key].setPopupContent(label);
-                textMarkers[key].setLatLng([latNum, lonNum]);
-              } else {
-                const color = type == "3" ? "red" : "green";
 
+              if (markers[key]) {
+                // Animate to new position
+                const currentLatLng = markers[key].getLatLng();
+                const newLatLng = L.latLng(latNum, lonNum);
+
+                // Smooth movement animation
+                let startTime = null;
+                const duration = 15000; // 1 second
+
+                function animateMarker(timestamp) {
+                  if (!startTime) startTime = timestamp;
+                  const progress = Math.min(
+                    (timestamp - startTime) / duration,
+                    1
+                  );
+
+                  const lat =
+                    currentLatLng.lat +
+                    (newLatLng.lat - currentLatLng.lat) * progress;
+                  const lng =
+                    currentLatLng.lng +
+                    (newLatLng.lng - currentLatLng.lng) * progress;
+
+                  markers[key].setLatLng([lat, lng]);
+                  textMarkers[key].setLatLng([lat, lng]);
+
+                  if (progress < 1) {
+                    requestAnimationFrame(animateMarker);
+                  } else {
+                    markers[key].setIcon(vehicleIcon);
+                  }
+                }
+
+                requestAnimationFrame(animateMarker);
+              } else {
                 markers[key] = L.marker([latNum, lonNum], {
                   icon: vehicleIcon,
                   riseOnHover: true,
@@ -89,7 +115,7 @@
 
                 // Add line number text
                 const divIcon = L.divIcon({
-                  html: `<div style="color: white; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px;">${lineNum}</div>`,
+                  html: `<div style="color: white; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px; transition: all 1s ease;">${lineNum}</div>`,
                   className: "",
                   iconSize: [24, 24],
                   iconAnchor: [12, 12],
@@ -97,19 +123,21 @@
 
                 textMarkers[key] = L.marker([latNum, lonNum], {
                   icon: divIcon,
-                }).addTo(map);
-              }
-
-              // Remove markers that weren't updated this cycle
-              for (const key in markers) {
-                if (!seen.has(key)) {
-                  map.removeLayer(markers[key]);
-                  map.removeLayer(textMarkers[key]);
-                  delete markers[key];
-                  delete textMarkers[key];
-                }
+                })
+                  .addTo(map)
+                  .bindPopup(label);
               }
             });
+
+            // Remove markers that weren't updated this cycle
+            for (const key in markers) {
+              if (!seen.has(key)) {
+                map.removeLayer(markers[key]);
+                map.removeLayer(textMarkers[key]);
+                delete markers[key];
+                delete textMarkers[key];
+              }
+            }
           })
           .catch((error) => {
             console.error("Error fetching data:", error);
