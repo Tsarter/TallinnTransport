@@ -8,8 +8,6 @@ from datetime import datetime
 import time
 import traceback
 from config import (
-    REALTIME_URL,
-    REALTIME_DATA_DIR,
     INTERRUPTIONS_URL,
     INTERRUPTIONS_DATA_DIR,
     REALTIME_URL_TXT,
@@ -21,14 +19,8 @@ from iaib.folder_saving.notify_discord import notify_error_discord
 from iaib.folder_saving.data_to_timescaledb import save_to_database
 
 
-def fetch_realtime_data(file_type="json", url=REALTIME_URL):
+def fetch_realtime_data(file_type="json", url=REALTIME_URL_TXT):
     response = requests.get(url)
-    #timestamp = datetime.now().strftime("%H-%M-%S")
-    # Save to files
-    # folder_path = f'{REALTIME_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
-    # os.makedirs(folder_path, exist_ok=True)
-    # with open(f"{folder_path}/{timestamp}.{file_type}", "w", encoding="utf-8") as file:
-    #    file.write(response.text)
     
     # Save to database
     if file_type == "txt":
@@ -41,8 +33,8 @@ def fetch_realtime_data(file_type="json", url=REALTIME_URL):
     try:
         save_to_database(data, timestamp2)
     except Exception as e:
-        print(f"Error saving to database: {e}", flush=True)
-        print(traceback.format_exc(), flush=True)
+        print(f"Error saving to database: {e}")
+        print(traceback.format_exc())
         notify_error_discord(e)
 
 # Function to fetch the current interruptions data
@@ -85,20 +77,19 @@ def check_and_save_interruptions():
         with open(f"{folder_path}/{timestamp}.json", "w", encoding="utf-8") as file:
             json.dump(new_data, file)
         if new_is_empty:
-            print(f"Interruption ended at {timestamp}", flush=True)
+            print(f"Interruption ended at {timestamp}")
         else:
-            print(f"New interruption started at {timestamp}", flush=True)
+            print(f"New interruption started at {timestamp}")
 
 
 def main():
     last_interruptions_time = 0
-    print("Starting the data fetching loop...", flush=True)
+    print("Starting the data fetching loop...")
     while True:
         
         start_time = time.time()
         try:
             # Fetch realtime data every 30 seconds
-            # fetch_realtime_data()
             fetch_realtime_data(
                 "txt", REALTIME_URL_TXT
             )  # More data with this url (route destination incl.)
@@ -110,16 +101,16 @@ def main():
 
         except requests.exceptions.RequestException as e:
             # Handle network-related errors
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Network error: {e}", flush=True)
+            # print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Network error: {e}", flush=True)
             notify_error_discord(e)
         except sqlite3.DatabaseError as e:
             # Handle database-related errors
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Database error: {e}", flush=True)
+            # print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Database error: {e}", flush=True)
             notify_error_discord(e)
         except Exception as e:
             # Catch-all for other exceptions
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Unexpected error: {e}", flush=True)
-            print(traceback.format_exc(), flush=True)  # Print the full traceback for debugging
+            # print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - Unexpected error: {e}", flush=True)
+            # print(traceback.format_exc(), flush=True)  # Print the full traceback for debugging
             notify_error_discord(e)
 
 
