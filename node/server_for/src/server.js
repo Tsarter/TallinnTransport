@@ -25,6 +25,20 @@ function getQuery(type, filename) {
   );
 }
 
+const debug = true;
+
+
+function validateParamsWithLogging(query) {
+  const validationResult = validateParams(query);
+  if (validationResult !== "") {
+    if (debug) {
+      console.log("Validation error:", validationResult);
+      console.log("Query params:", query);
+    }
+  }
+  return validationResult;
+}
+
 function validateParams(query) {
   const {
     type,
@@ -100,10 +114,11 @@ function validateParams(query) {
 // Define a GET endpoint to query the table
 app.get("/speedsegments", tempCacheMiddleware(60),async (req, res) => {
   try {
-    console.log(req.query);
-    const isValidRes = validateParams(req.query);
+    if (debug) {
+      console.log("Received query:", req.query);
+    }
+    const isValidRes = validateParamsWithLogging(req.query);
     if (isValidRes !== "") {
-      console.log(isValidRes);
       return res.status(400).json({ error: isValidRes });
     }
 
@@ -154,8 +169,10 @@ app.get("/speedsegments", tempCacheMiddleware(60),async (req, res) => {
         ${select_data}
         ${disStops ? not_within_stop : ';'}
       `;
-
-      console.log(fullQuery);
+      if (debug) {
+        console.log("Full query:", fullQuery);
+        console.log("Bindings:", bindings);
+      }
       // Execute the query
       const result = await db.raw(fullQuery, bindings);
       res.json(result.rows);
@@ -171,9 +188,8 @@ app.get("/speedsegments", tempCacheMiddleware(60),async (req, res) => {
 
 app.get("/points", tempCacheMiddleware(60),async (req, res) => {
   try {
-    const isValidRes = validateParams(req.query);
+    const isValidRes = validateParamsWithLogging(req.query);
     if (isValidRes !== "") {
-      console.log(isValidRes);
       return res.status(400).json({ error: isValidRes });
     }
     const { type, line, startTime, endTime, maxSpeed } = req.query;
@@ -189,7 +205,9 @@ app.get("/points", tempCacheMiddleware(60),async (req, res) => {
     select += maxSpeed ? ` AND speed_kmh < ${maxSpeed}` : "";
 
     const query = `${select};`;
-    console.log(query);
+    if (debug) {
+      console.log("Query:", query);
+    }
     const result = await db.raw(query);
     res.json(result.rows);
   } catch (err) {
@@ -200,9 +218,8 @@ app.get("/points", tempCacheMiddleware(60),async (req, res) => {
 );
 
 app.get("/speedgraph", tempCacheMiddleware(60), async (req, res) => {
-  const isValidRes = validateParams(req.query);
+  const isValidRes = validateParamsWithLogging(req.query);
   if (isValidRes !== "") {
-    console.log(isValidRes);
     return res.status(400).json({ error: isValidRes });
   }
   const { vehicle_id, startTime, tws, disableDepos, line } = req.query;
@@ -247,9 +264,8 @@ app.get("/speedgraph", tempCacheMiddleware(60), async (req, res) => {
 });
 
 app.get("/gridspeeds",cacheMiddlewarePersistent(), async (req, res) => {
-  const isValidRes = validateParams(req.query);
+  const isValidRes = validateParamsWithLogging(req.query);
   if (isValidRes !== "") {
-    console.log(isValidRes);
     return res.status(400).json({ error: isValidRes });
   }
   /* const { vehicle_id, startTime, tws } = req.query;
@@ -291,9 +307,8 @@ app.get("/stops", cacheMiddlewarePersistent(), async (req, res) => {
 
 app.get("/loc_to_loc", async (req, res) => {
   try {
-    const isValidRes = validateParams(req.query);
+    const isValidRes = validateParamsWithLogging(req.query);
     if (isValidRes !== "") {
-      console.log(isValidRes);
       return res.status(400).json({ error: isValidRes });
     }
     const { lat1, lon1, lat2, lon2 } = req.query;
@@ -330,9 +345,8 @@ app.get("/trips",cacheMiddlewarePersistent(), async (req, res) => {
     // type: '3' // optional
   };
   try {
-    const isValidRes = validateParams(req.query);
+    const isValidRes = validateParamsWithLogging(req.query);
     if (isValidRes !== "") {
-      console.log(isValidRes);
       return res.status(400).json({ error: isValidRes });
     }
     let query = getQuery("trips", "trips.sql");

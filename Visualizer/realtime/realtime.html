@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Tallinn Live Transport</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      #map {
+        height: 100vh;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const map = L.map("map").setView([59.437, 24.7535], 13); // Centered on Tallinn
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+      }).addTo(map);
+
+      const markers = {};
+      const textMarkers = {};
+
+      function fetchData() {
+        fetch("https://tallinn.simplytobo.eu/proxy/readfile.php?name=gps.txt")
+          .then((res) => res.text())
+          .then((data) => {
+            const lines = data.trim().split("\n");
+
+            const seen = new Set();
+            console.log("lines", lines);
+
+            lines.forEach((line) => {
+              const [
+                type,
+                lineNum,
+                lon,
+                lat,
+                ,
+                direction,
+                vehicleId,
+                ,
+                tripId,
+                destination,
+              ] = line.split(",");
+
+              const key = `${type}-${vehicleId}`;
+              seen.add(key);
+
+              const latNum = parseFloat(lat) / 1e6;
+              const lonNum = parseFloat(lon) / 1e6;
+
+              const label = `${
+                type == "3" ? "Tram" : "Bus"
+              } ${lineNum} → ${destination}`;
+
+              const iconType = type == "3" ? "Tram" : "Bus";
+              const vehicleIcon = L.divIcon({
+                html: `<img src="../assets/${iconType}Icon.svg" style="width: 24px; height: 24px; transform: rotate(${direction}deg);" />`,
+                className: "",
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+              });
+              if (markers[key]) {
+                markers[key].setLatLng([latNum, lonNum]).setIcon(vehicleIcon);
+                markers[key].setPopupContent(label);
+                textMarkers[key].setLatLng([latNum, lonNum]);
+              } else {
+                const color = type == "3" ? "red" : "green";
+
+                markers[key] = L.marker([latNum, lonNum], {
+                  icon: vehicleIcon,
+                  riseOnHover: true,
+                  riseOffset: 100,
+                })
+                  .addTo(map)
+                  .bindPopup(label);
+
+                // Add line number text
+                const divIcon = L.divIcon({
+                  html: `<div style="color: white; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px;">${lineNum}</div>`,
+                  className: "",
+                  iconSize: [24, 24],
+                  iconAnchor: [12, 12],
+                });
+
+                textMarkers[key] = L.marker([latNum, lonNum], {
+                  icon: divIcon,
+                }).addTo(map);
+              }
+
+              // Remove markers that weren't updated this cycle
+              for (const key in markers) {
+                if (!seen.has(key)) {
+                  map.removeLayer(markers[key]);
+                  map.removeLayer(textMarkers[key]);
+                  delete markers[key];
+                  delete textMarkers[key];
+                }
+              }
+            });
+          })
+          .catch((error) => {
+            console.error("Error fetching data:", error);
+          });
+      }
+
+      fetchData();
+      setInterval(fetchData, 15000); // refresh every 15s
+    </script>
+  </body>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #leaflet-marker-icon {
+      z-index: 10;
+    }
+  </style>
+</html>
