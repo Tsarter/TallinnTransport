@@ -31,38 +31,90 @@
 
       const markers = {};
       const textMarkers = {};
+      const interruptions = {};
+      const vehiclesInEstonian = {
+        3: "Tramm",
+        10: "Rong",
+        2: "Buss",
+      };
+
+      function fetchInterruptions() {
+        fetch("/transport_data/transport_data/interruptions_data/ongoing.json")
+          .then((res) => res.json())
+          .then((data) => {
+            data = data[0];
+            for (const route of data.routes.split(",")) {
+              let cleanedRoute = "";
+              let destination = "";
+              if (route.includes("->")) {
+                [cleanedRoute, destination] = route
+                  .split("->")
+                  .map((s) => s.trim());
+              } else {
+                cleanedRoute = route.trim();
+                destination = "both";
+              }
+              interruption = {
+                transport: data.transport,
+                route: cleanedRoute,
+                destination: destination,
+                start_time: data.start_time,
+                announcement: data.announcement,
+                info: data.info,
+              };
+              const key = `${cleanedRoute}-${data.transport}`;
+              interruptions[key] = interruption;
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching interruptions:", error);
+          });
+      }
 
       function fetchData() {
         console.log("Fetching data...");
         console.log("Current time:", new Date().toLocaleTimeString());
         fetch(`/proxy/gps`)
-          .then((res) => res.json())
+          .then((res) => res.text())
           .then((data) => {
+            const lines = data.trim().split("\n");
+
             const seen = new Set();
 
-            data.features.forEach((feature) => {
-              const {
-                id: vehicleId,
+            lines.forEach((line) => {
+              const [
                 type,
-                line: lineNum,
+                lineNum,
+                lon,
+                lat,
+                ,
                 direction,
+                vehicleId,
+                ,
+                tripId,
                 destination,
-              } = feature.properties;
-
-              const [lon, lat] = feature.geometry.coordinates;
+              ] = line.split(",");
 
               const key = `${type}-${vehicleId}`;
               seen.add(key);
 
-              const latNum = lat;
-              const lonNum = lon;
+              const latNum = parseFloat(lat) / 1e6;
+              const lonNum = parseFloat(lon) / 1e6;
 
-              const label = `${
-                type == "3" ? "Tram" : "Bus"
-              } ${lineNum} → ${destination}`;
+              // Check if interruption for this type and line
+              const interruptionKey = `${lineNum}-${vehiclesInEstonian[type]}`;
+              let announcement = "";
+              if (interruptionKey in interruptions) {
+                const interruption = interruptions[interruptionKey];
+                const info = interruption.info || "";
+                announcement = interruption.announcement || "";
+              }
 
-              const iconType =
+              const vehicleType =
                 type == "3" ? "Tram" : type == "10" ? "Train" : "Bus";
+              const label = `${vehicleType} ${lineNum} → ${destination} ${announcement}`;
+
+              const iconType = vehicleType;
               const vehicleIcon = L.divIcon({
                 html: `<img src="../assets/${iconType}Icon.svg" style="width: 24px; height: 24px; transform: rotate(${direction}deg); transition: transform 1s ease;" />`,
                 className: "",
@@ -77,9 +129,10 @@
 
                 // Smooth movement animation
                 let startTime = null;
-                const duration = 15000; // 1 second
+                const duration = 6000; // 6 seconds
 
                 function animateMarker(timestamp) {
+                  if (!markers[key] || !textMarkers[key]) return;
                   if (!startTime) startTime = timestamp;
                   const progress = Math.min(
                     (timestamp - startTime) / duration,
@@ -143,9 +196,9 @@
             console.error("Error fetching data:", error);
           });
       }
-
+      fetchInterruptions();
       fetchData();
-      setInterval(fetchData, 15000); // refresh every 15s
+      setInterval(fetchData, 6000); // refresh every 6s
     </script>
   </body>
   <style>

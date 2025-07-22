@@ -21,7 +21,7 @@ let timeSinceLastRequest = Date.now();
 app.get(
   "/gps",
 
-  cache("10 seconds"),
+  cache("5 seconds"),
   async (req, res) => {
     // let timeNow = Date.now();
     /* console.log(
@@ -32,7 +32,11 @@ app.get(
     // timeSinceLastRequest = timeNow;
     // console.log(`Cache MISS for GPS: ${req.method} ${req.url}`);
     try {
-      const response = await fetch("https://gis.ee/tallinn/gps.php");
+      const time = Date.now();
+      const url = "https://transport.tallinn.ee/gps.txt?" + time;
+
+      //console.log(`Fetching GPS data from: ${url}`);
+      const response = await fetch(url);
       if (!response.ok) {
         console.log(`Non-200 GPS response: ${response.status} for ${req.url}`);
         return res.status(response.status).send("Error fetching GPS data");
