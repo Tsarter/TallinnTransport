@@ -4,8 +4,6 @@ DATA_DIR = (
     "/home/tanel/Documents/public_transport_project/HardDrive/data/transport_data"
 )
 
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1258765586167758870/WgUJ-wPgZMFXnspyBDNdZQBGg7GVeBwjI0EsBM_Ofe8tJPVvj3qEzOq4gbCeuBrDRw6I"
-
 # Realtime Location Data
 # https://gis.ee/tallinn/gps.php | https://transport.tallinn.ee/readfile.php?name=gps.txt | https://gis.ee/tallinn/gps.txt
 REALTIME_URL = "https://gis.ee/tallinn/gps.php"
