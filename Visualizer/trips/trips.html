@@ -66,15 +66,17 @@
         colors: trip.colors
       }));
       console.log('Mini trips data:', miniTrips); 
+      var minitripsORtripsData = miniTrips
+      //var minitripsORtripsData = tripsData
       const tripsLayer = new MapboxLayer({
         id: 'trips-layer',
         type: deck.TripsLayer,
-        data: miniTrips,
+        data: minitripsORtripsData,
         //data: tripsData,
         getPath: d => d.path,
         getTimestamps: d => d.timestamp,
-        getColor: d => d.color,
-        //getColor: d => d.type == "1" ? [254, 127, 45] : [155, 0, 155],
+        //getColor: d => d.color,
+        getColor: d => d.type == "1" ? [254, 127, 45] : [155, 0, 155],
         currentTime: 0,
         trailLength: 90,
         capRounded: true,
@@ -89,6 +91,9 @@
       let time = 0;
       setInterval(() => {
         time += 1;
+        if (time >= minitripsORtripsData[minitripsORtripsData.length - 1].timestamp[1]) {
+          time = 0; // Reset time after reaching the end
+        }
          // Update the time display every second
          if (time % 60 === 0) {
           updateTimeDisplay(originalTime, time);
