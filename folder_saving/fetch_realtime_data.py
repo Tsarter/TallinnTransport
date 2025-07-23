@@ -75,7 +75,11 @@ def check_and_save_interruptions():
         folder_path = f'{INTERRUPTIONS_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
         os.makedirs(folder_path, exist_ok=True)
         with open(f"{folder_path}/{timestamp}.json", "w", encoding="utf-8") as file:
-            json.dump(new_data, file)
+            json.dump(new_data, file, ensure_ascii=False, indent=2)
+        
+        # Save ongoing state to a separate file
+        with open(f"{INTERRUPTIONS_DATA_DIR}/ongoing.json", "w", encoding="utf-8") as file:
+            json.dump(new_data, file, ensure_ascii=False, indent=2)
         if new_is_empty:
             print(f"Interruption ended at {timestamp}")
         else:
