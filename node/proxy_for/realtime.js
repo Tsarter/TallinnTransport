@@ -5,12 +5,12 @@ Proxied from nginx
 */
 
 const express = require("express");
-const { createProxyMiddleware } = require("http-proxy-middleware");
 const cors = require("cors");
 
 const apicache = require("apicache");
 apicache.options({ headers: { "Cache-Control": "public, max-age=10" } }); // Set default cache headers
 let cache = apicache.middleware;
+const utils = require("./utils/routeUtils.js");
 
 const app = express();
 app.use(cors());
@@ -23,14 +23,6 @@ app.get(
 
   cache("5 seconds"),
   async (req, res) => {
-    // let timeNow = Date.now();
-    /* console.log(
-      `Time since last request: ${parseInt(
-        Math.floor((timeNow - timeSinceLastRequest) / 1000)
-      )} s`
-    ); */
-    // timeSinceLastRequest = timeNow;
-    // console.log(`Cache MISS for GPS: ${req.method} ${req.url}`);
     try {
       const time = Date.now();
       const url = "https://transport.tallinn.ee/gps.txt?" + time;
@@ -51,39 +43,24 @@ app.get(
     }
   }
 );
-/* app.use(
-  "/",
-  (req, res, next) => {
-    console.log(`Incoming request: ${req.method} ${req.url} (${++counter})`);
-    next();
-  },
-  cache("30 seconds"),
-  (req, res, next) => {
-    const isCacheHit = res.getHeader("apicache-store") || res.locals.apicache;
-    if (isCacheHit) {
-      console.log(`Cache HIT for: ${req.method} ${req.url}`);
-    } else {
-      console.log(`Cache MISS for: ${req.method} ${req.url}`);
-    }
-    next();
-  },
-  createProxyMiddleware({
-    target: "https://transport.tallinn.ee", // Forward requests to this URL
-    changeOrigin: true, // Adjust the origin of requests
-    pathRewrite: {
-      "^/api/realtime": "", // Remove "/api" from the URL when forwarding
-    },
-    logLevel: "debug", // Optional: Logs the proxy details for debugging
-    onProxyRes: (proxyRes, req) => {
-      if (proxyRes.statusCode !== 200) {
-        console.log(`Non-200 response: ${proxyRes.statusCode} for ${req.url}`);
-      } else {
-        console.log(`Proxying request: ${req.method} ${req.url}`);
-      }
-    },
-  })
-);
- */
+
+app.get("/route", cache("1 day"), async (req, res) => {
+  const { line, destination, type } = req.query;
+
+  if (!line || !destination || !type) {
+    return res
+      .status(400)
+      .json({ error: "Missing line, destination, or type query param" });
+  }
+
+  try {
+    const coords = await utils.getRouteCoordinates({ line, destination, type });
+    res.json(coords);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start the server
 const port = 3001;
 app.listen(port, () => {

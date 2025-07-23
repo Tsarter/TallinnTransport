@@ -106,8 +106,8 @@ function fetchData() {
         // Avoid animation after user returns to the page
         if (lastUpdate && Date.now() - lastUpdate > 30000) {
           console.log("Skipping animation");
-          markers[key].setLatLng([lat, lng]);
-          textMarkers[key].setLatLng([lat, lng]);
+          markers[key].setLatLng([lat, lon]);
+          textMarkers[key].setLatLng([lat, lon]);
         } else if (markers[key]) {
           const options = {
             key,
@@ -145,6 +145,21 @@ function fetchData() {
     .catch((error) => {
       console.error("Error fetching data:", error);
     });
+}
+
+let previousRoute = null;
+async function vehicleLabelCallback(vehicleType, lineNumber, destination) {
+  if (previousRoute) {
+    map.removeLayer(previousRoute);
+    previousRoute = null;
+  }
+  const routeCoordinates = await fetchRouteData(
+    vehicleType,
+    lineNumber,
+    destination
+  );
+  console.log("Route coordinates:", routeCoordinates);
+  previousRoute = drawRoute(map, routeCoordinates);
 }
 
 function markerAnimation(options) {
@@ -218,7 +233,8 @@ function markerCreation(options) {
     riseOffset: 100,
   })
     .addTo(map)
-    .bindPopup(label);
+    .bindPopup(label)
+    .on("click", () => vehicleLabelCallback(type, lineNum, destination));
 
   // Add line number text
   const divIcon = L.divIcon({
@@ -234,8 +250,30 @@ function markerCreation(options) {
     icon: divIcon,
   })
     .addTo(map)
-    .bindPopup(label);
+    .bindPopup(label)
+    .on("click", () => vehicleLabelCallback(type, lineNum, destination));
 }
+
+async function fetchRouteData(vehicleType, lineNumber, destination) {
+  const response = await fetch(
+    `/proxy/route?line=${lineNumber}&type=${vehicleType}&destination=${destination}`
+  );
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  const routeCoordinates = await response.json();
+  return routeCoordinates;
+}
+
+function drawRoute(map, routePoints) {
+  const polyline = L.polyline(routePoints, {
+    color: "blue",
+    weight: 5,
+    opacity: 0.7,
+  }).addTo(map);
+  return polyline;
+}
+
 fetchInterruptions();
 fetchData();
 setInterval(fetchData, 6000);
