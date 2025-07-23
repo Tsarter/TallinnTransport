@@ -108,6 +108,8 @@ def fetch_gfts_data():
         # Save the downloaded file
         with open(output_zip_path, "wb") as f:
             f.write(zipFile)
+        with open(os.path.join(GTFS_DATA_DIR,  "latest_gtfs.zip") , "wb") as f:
+            f.write(zipFile)
         # Use this when using https://peatus.ee/gtfs/gtfs.zip to only keep Tallinna Linnatranspordi AS data
         # filter_gtfs_by_agency(zipFile, GFTS_TALLINNA_LINNATRANSPORDI_AS_ID, output_zip_path)
         
