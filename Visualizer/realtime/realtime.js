@@ -103,97 +103,38 @@ function fetchData() {
           ongoingInterruption = true;
         }
 
-        const vehicleType = vehiclesInEstonian[type];
-        const label = `${vehicleType} ${lineNum} → ${destination} ${announcement}`;
-
-        const iconType = vehicleType;
-        const iconName = `${iconType}${
-          ongoingInterruption ? "Warning" : ""
-        }Icon.svg`;
-        const vehicleIcon = L.divIcon({
-          html: `<img src="../assets/${iconName}" style="width: 24px; height: 24px; transform: rotate(${direction}deg); transition: transform 1s ease;" />`,
-          className: `vehicle-${key}`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        });
-
         // Avoid animation after user returns to the page
         if (lastUpdate && Date.now() - lastUpdate > 30000) {
           console.log("Skipping animation");
           markers[key].setLatLng([lat, lng]);
           textMarkers[key].setLatLng([lat, lng]);
         } else if (markers[key]) {
-          // Animate to new position
-          const currentLatLng = markers[key].getLatLng();
-          const newLatLng = L.latLng(latNum, lonNum);
-
-          // Smooth movement animation
-          let startTime = null;
-          const duration = 6000; // 6 seconds
-
-          function animateMarker(timestamp) {
-            if (!markers[key] || !textMarkers[key]) return;
-            if (!startTime) startTime = timestamp;
-            const progress = Math.min((timestamp - startTime) / duration, 1);
-
-            const lat =
-              currentLatLng.lat +
-              (newLatLng.lat - currentLatLng.lat) * progress;
-            const lng =
-              currentLatLng.lng +
-              (newLatLng.lng - currentLatLng.lng) * progress;
-
-            // Update rotation during animation using CSS
-            const markerElement = markers[key].getElement();
-            if (markerElement) {
-              const imgElement = markerElement.querySelector("img");
-              if (imgElement) {
-                imgElement.style.transform = `rotate(${direction}deg)`;
-              }
-            }
-
-            markers[key].setLatLng([lat, lng]);
-            textMarkers[key].setLatLng([lat, lng]);
-
-            if (progress < 1) {
-              lastUpdate = Date.now();
-              requestAnimationFrame(animateMarker);
-            }
-          }
-
-          requestAnimationFrame(animateMarker);
+          const options = {
+            key,
+            latNum,
+            lonNum,
+            direction,
+          };
+          markerAnimation(options);
         } else {
-          console.log("Adding new marker for key:", key);
-          markers[key] = L.marker([latNum, lonNum], {
-            icon: vehicleIcon,
-            riseOnHover: true,
-            riseOffset: 100,
-          })
-            .addTo(map)
-            .bindPopup(label);
-
-          // Add line number text
-          const divIcon = L.divIcon({
-            html: `<div style="color: ${
-              ongoingInterruption ? "yellow" : "white"
-            }; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px; transition: all 1s ease;">${lineNum}</div>`,
-            className: "",
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-          });
-
-          textMarkers[key] = L.marker([latNum, lonNum], {
-            icon: divIcon,
-          })
-            .addTo(map)
-            .bindPopup(label);
+          const options = {
+            key,
+            latNum,
+            lonNum,
+            lineNum,
+            ongoingInterruption,
+            type,
+            destination,
+            announcement,
+            direction,
+          };
+          markerCreation(options);
         }
       });
 
       // Remove markers that weren't updated this cycle
       for (const key in markers) {
         if (!seen.has(key)) {
-          console.log("Removing marker for key:", key);
           map.removeLayer(markers[key]);
           map.removeLayer(textMarkers[key]);
           delete markers[key];
@@ -204,6 +145,96 @@ function fetchData() {
     .catch((error) => {
       console.error("Error fetching data:", error);
     });
+}
+
+function markerAnimation(options) {
+  const { key, latNum, lonNum, direction } = options;
+  // Animate to new position
+  const currentLatLng = markers[key].getLatLng();
+  const newLatLng = L.latLng(latNum, lonNum);
+
+  // Smooth movement animation
+  let startTime = null;
+  const duration = 6000; // 6 seconds
+
+  function animateMarker(timestamp) {
+    if (!markers[key] || !textMarkers[key]) return;
+    if (!startTime) startTime = timestamp;
+    const progress = Math.min((timestamp - startTime) / duration, 1);
+
+    const lat =
+      currentLatLng.lat + (newLatLng.lat - currentLatLng.lat) * progress;
+    const lng =
+      currentLatLng.lng + (newLatLng.lng - currentLatLng.lng) * progress;
+
+    // Update rotation during animation using CSS
+    const markerElement = markers[key].getElement();
+    if (markerElement) {
+      const imgElement = markerElement.querySelector("img");
+      if (imgElement) {
+        imgElement.style.transform = `rotate(${direction}deg)`;
+      }
+    }
+
+    markers[key].setLatLng([lat, lng]);
+    textMarkers[key].setLatLng([lat, lng]);
+
+    if (progress < 1) {
+      lastUpdate = Date.now();
+      requestAnimationFrame(animateMarker);
+    }
+  }
+  requestAnimationFrame(animateMarker);
+}
+
+function markerCreation(options) {
+  const {
+    key,
+    latNum,
+    lonNum,
+    lineNum,
+    ongoingInterruption,
+    type,
+    destination,
+    announcement,
+    direction,
+  } = options;
+
+  const vehicleType = vehiclesInEstonian[type];
+  const label = `${vehicleType} ${lineNum} → ${destination} ${announcement}`;
+
+  const iconType = vehicleType;
+  const iconName = `${iconType}${ongoingInterruption ? "Warning" : ""}Icon.svg`;
+  const vehicleIcon = L.divIcon({
+    html: `<img src="../assets/${iconName}" style="width: 24px; height: 24px; transform: rotate(${direction}deg); transition: transform 1s ease;" />`,
+    className: `vehicle-${key}`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  markers[key] = L.marker([latNum, lonNum], {
+    icon: vehicleIcon,
+    riseOnHover: true,
+    riseOffset: 100,
+  })
+    .addTo(map)
+    .bindPopup(label);
+
+  // Add line number text
+  const divIcon = L.divIcon({
+    html: `<div style="color: ${
+      ongoingInterruption ? "yellow" : "white"
+    }; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px; transition: all 1s ease;">${lineNum}</div>`,
+    className: "",
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+
+  textMarkers[key] = L.marker([latNum, lonNum], {
+    icon: divIcon,
+  })
+    .addTo(map)
+    .bindPopup(label);
 }
 fetchInterruptions();
 fetchData();
