@@ -11,8 +11,13 @@ async function extractAndParseCSV(zipPath, fileName) {
   const directory = await unzipper.Open.file(zipPath);
   const file = directory.files.find((f) => f.path === fileName);
   if (!file) throw new Error(`${fileName} not found in ZIP`);
-  const content = await file.buffer();
-  return parse(content.toString(), {
+  let content = await file.buffer();
+  let text = content.toString();
+  // Remove BOM if present
+  if (text.charCodeAt(0) === 0xfeff) {
+    text = text.slice(1);
+  }
+  return parse(text, {
     columns: true,
     skip_empty_lines: true,
   });

@@ -6,6 +6,7 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 const markers = {};
 const textMarkers = {};
+const popups = {};
 const interruptions = {};
 const vehiclesInEstonian = {
   3: "Tramm",
@@ -108,6 +109,7 @@ function fetchData() {
           console.log("Skipping animation");
           markers[key].setLatLng([lat, lon]);
           textMarkers[key].setLatLng([lat, lon]);
+          lastUpdate = Date.now();
         } else if (markers[key]) {
           const options = {
             key,
@@ -158,7 +160,6 @@ async function vehicleLabelCallback(vehicleType, lineNumber, destination) {
     lineNumber,
     destination
   );
-  console.log("Route coordinates:", routeCoordinates);
   previousRoute = drawRoute(map, routeCoordinates);
 }
 
@@ -193,6 +194,7 @@ function markerAnimation(options) {
 
     markers[key].setLatLng([lat, lng]);
     textMarkers[key].setLatLng([lat, lng]);
+    popups[key].setLatLng([lat, lng]);
 
     if (progress < 1) {
       lastUpdate = Date.now();
@@ -227,15 +229,21 @@ function markerCreation(options) {
     iconAnchor: [12, 12],
   });
 
+  const popup = L.popup({ autoPan: false })
+    .setLatLng([latNum, lonNum])
+    .setContent(label);
+  popups[key] = popup;
   markers[key] = L.marker([latNum, lonNum], {
     icon: vehicleIcon,
     riseOnHover: true,
     riseOffset: 100,
   })
     .addTo(map)
-    .bindPopup(label)
-    .on("click", () => vehicleLabelCallback(type, lineNum, destination));
-
+    .on("click", () => {
+      map.closePopup(); // optional: close previous popup
+      popup.openOn(map);
+      vehicleLabelCallback(type, lineNum, destination);
+    });
   // Add line number text
   const divIcon = L.divIcon({
     html: `<div style="color: ${
@@ -250,8 +258,11 @@ function markerCreation(options) {
     icon: divIcon,
   })
     .addTo(map)
-    .bindPopup(label)
-    .on("click", () => vehicleLabelCallback(type, lineNum, destination));
+    .on("click", () => {
+      map.closePopup(); // optional: close previous popup
+      popup.openOn(map);
+      vehicleLabelCallback(type, lineNum, destination);
+    });
 }
 
 async function fetchRouteData(vehicleType, lineNumber, destination) {
