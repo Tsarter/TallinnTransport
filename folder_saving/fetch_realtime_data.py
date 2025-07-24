@@ -62,15 +62,11 @@ def get_last_interruption_state():
 # Function to save the interruption data if state has changed
 def check_and_save_interruptions():
     new_data = fetch_interruptions()
-    new_is_empty = len(new_data) == 0  # Check if new interruption data is empty
 
     last_data = get_last_interruption_state()
-    last_is_empty = (
-        len(last_data) == 0 if last_data is not None else True
-    )  # Check if last interruption data was empty
 
     # Only save if the state has changed
-    if new_is_empty != last_is_empty:
+    if new_data != last_data:
         timestamp = datetime.now().strftime("%H-%M-%S")
         folder_path = f'{INTERRUPTIONS_DATA_DIR}/{datetime.now().strftime("%Y-%m-%d")}'
         os.makedirs(folder_path, exist_ok=True)
@@ -80,17 +76,12 @@ def check_and_save_interruptions():
         # Save ongoing state to a separate file
         with open(f"{INTERRUPTIONS_DATA_DIR}/ongoing.json", "w", encoding="utf-8") as file:
             json.dump(new_data, file, ensure_ascii=False, indent=2)
-        if new_is_empty:
-            print(f"Interruption ended at {timestamp}")
-        else:
-            print(f"New interruption started at {timestamp}")
 
 
 def main():
     last_interruptions_time = 0
     print("Starting the data fetching loop...")
     while True:
-        
         start_time = time.time()
         try:
             # Fetch realtime data every 30 seconds
