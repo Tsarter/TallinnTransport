@@ -1,4 +1,35 @@
-const map = L.map("map").setView([59.437, 24.7535], 13); // Centered on Tallinn
+let map = L.map("map").setView([59.4372, 24.7454], 13); // Centered on Tallinn
+
+function geolocationSuccess(position) {
+  const lat = position.coords.latitude;
+  const lon = position.coords.longitude;
+  console.log("User's location:", lat, lon);
+  map.setView([lat, lon], 15); // Centered on user's location
+  const userLocationMarker = L.circleMarker([lat, lon], {
+    radius: 6,
+    color: "white",
+    fillColor: "blue",
+    stroke: true,
+    weight: 1,
+    fillOpacity: 0.8,
+  })
+    .bindPopup("Sinu asukoht")
+    .addTo(map);
+  // Add a marker for the user's location
+}
+function geolocationError(error) {
+  console.error("Geolocation error:", error);
+  // Default Tallinn location is used for map, don't change view
+}
+
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    geolocationSuccess,
+    geolocationError
+  );
+} else {
+  console.log("Geolocation is not supported by this browser.");
+}
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18,
@@ -8,6 +39,7 @@ const markers = {};
 const textMarkers = {};
 const popups = {};
 const interruptions = {};
+let previousRoute = null;
 const vehiclesInEstonian = {
   3: "Tramm",
   10: "Rong",
@@ -55,6 +87,10 @@ function fetchInterruptions() {
 function fetchData() {
   console.log("Fetching data...");
   console.log("Current time:", new Date().toLocaleTimeString());
+  if (document.hidden) {
+    console.log("Window is not active, skipping data fetch.");
+    return;
+  }
   fetch(`/proxy/gps`)
     .then((res) => res.text())
     .then((data) => {
@@ -104,20 +140,22 @@ function fetchData() {
           ongoingInterruption = true;
         }
 
-        // Avoid animation after user returns to the page
-        if (lastUpdate && Date.now() - lastUpdate > 30000) {
-          console.log("Skipping animation");
-          markers[key].setLatLng([lat, lon]);
-          textMarkers[key].setLatLng([lat, lon]);
-          lastUpdate = Date.now();
-        } else if (markers[key]) {
-          const options = {
-            key,
-            latNum,
-            lonNum,
-            direction,
-          };
-          markerAnimation(options);
+        if (markers[key]) {
+          if (lastUpdate && Date.now() - lastUpdate > 30000) {
+            // Avoid animation after user returns to the page
+            console.log("Skip animation, set lon lat directly");
+            markers[key].setLatLng([latNum, lonNum]);
+            textMarkers[key].setLatLng([latNum, lonNum]);
+            popups[key].setLatLng([latNum, lonNum]);
+          } else {
+            const options = {
+              key,
+              latNum,
+              lonNum,
+              direction,
+            };
+            markerAnimation(options);
+          }
         } else {
           const options = {
             key,
@@ -133,6 +171,7 @@ function fetchData() {
           markerCreation(options);
         }
       });
+      lastUpdate = Date.now();
 
       // Remove markers that weren't updated this cycle
       for (const key in markers) {
@@ -149,7 +188,6 @@ function fetchData() {
     });
 }
 
-let previousRoute = null;
 async function vehicleLabelCallback(vehicleType, lineNumber, destination) {
   if (previousRoute) {
     map.removeLayer(previousRoute);
@@ -197,11 +235,11 @@ function markerAnimation(options) {
     popups[key].setLatLng([lat, lng]);
 
     if (progress < 1) {
-      lastUpdate = Date.now();
       requestAnimationFrame(animateMarker);
     }
   }
   requestAnimationFrame(animateMarker);
+  lastUpdate = Date.now();
 }
 
 function markerCreation(options) {
@@ -240,10 +278,16 @@ function markerCreation(options) {
   })
     .addTo(map)
     .on("click", () => {
-      map.closePopup(); // optional: close previous popup
+      map.closePopup(); // close previous popup
       popup.openOn(map);
       vehicleLabelCallback(type, lineNum, destination);
     });
+
+  popup.on("remove", () => {
+    console.log(`Popup for ${key} closed.`);
+    map.removeLayer(previousRoute);
+    previousRoute = null;
+  });
   // Add line number text
   const divIcon = L.divIcon({
     html: `<div style="color: ${
@@ -278,7 +322,7 @@ async function fetchRouteData(vehicleType, lineNumber, destination) {
 
 function drawRoute(map, routePoints) {
   const polyline = L.polyline(routePoints, {
-    color: "blue",
+    color: "#0d00ffe3",
     weight: 5,
     opacity: 0.7,
   }).addTo(map);
