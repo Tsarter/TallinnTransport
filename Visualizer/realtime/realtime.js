@@ -1,35 +1,64 @@
 let map = L.map("map").setView([59.4372, 24.7454], 13); // Centered on Tallinn
 
-function geolocationSuccess(position) {
-  const lat = position.coords.latitude;
-  const lon = position.coords.longitude;
-  console.log("User's location:", lat, lon);
-  map.setView([lat, lon], 15); // Centered on user's location
-  const userLocationMarker = L.circleMarker([lat, lon], {
-    radius: 6,
-    color: "white",
-    fillColor: "blue",
-    stroke: true,
-    weight: 1,
-    fillOpacity: 0.8,
-  })
-    .bindPopup("Sinu asukoht")
-    .addTo(map);
-  // Add a marker for the user's location
+let userLocationMarker = null;
+let userLat = null;
+let userLon = null;
+let userZoom = 15; // Default zoom level for user location
+
+function geolocationSuccessWatch(position) {
+  userLat = position.coords.latitude;
+  userLon = position.coords.longitude;
+  console.log("User's location:", userLat, userLon);
+
+  userLocationMarker.setLatLng([userLat, userLon]);
 }
+function geolocationSuccessGet(position) {
+  userLat = position.coords.latitude;
+  userLon = position.coords.longitude;
+
+  map.setView([userLat, userLon], userZoom); // Centered on user's location
+  if (!userLocationMarker) {
+    userLocationMarker = L.circleMarker([userLat, userLon], {
+      radius: 7,
+      color: "white",
+      fillColor: "blue",
+      stroke: true,
+      weight: 2,
+      fillOpacity: 0.8,
+    })
+      .bindPopup("Sinu asukoht")
+      .addTo(map);
+    navigator.geolocation.watchPosition(
+      geolocationSuccessWatch,
+      geolocationError
+    );
+  }
+}
+
 function geolocationError(error) {
   console.error("Geolocation error:", error);
+  alert("Asukoha määramine ebaõnnestus.");
   // Default Tallinn location is used for map, don't change view
 }
 
-if (navigator.geolocation) {
-  navigator.geolocation.getCurrentPosition(
-    geolocationSuccess,
-    geolocationError
-  );
-} else {
-  console.log("Geolocation is not supported by this browser.");
-}
+// Center map to user location when button is clicked
+document.addEventListener("DOMContentLoaded", function () {
+  const btn = document.getElementById("center-user-btn");
+  if (btn) {
+    btn.addEventListener("click", function () {
+      if (userLat && userLon) {
+        map.setView([userLat, userLon], userZoom);
+      } else if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          geolocationSuccessGet,
+          geolocationError
+        );
+      } else {
+        alert("Asukoha määramine ei ole toetatud.");
+      }
+    });
+  }
+});
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18,
@@ -39,7 +68,9 @@ const markers = {};
 const textMarkers = {};
 const popups = {};
 const interruptions = {};
+const gpsLocations = {};
 let previousRoute = null;
+const previousDestinations = {};
 const vehiclesInEstonian = {
   3: "Tramm",
   10: "Rong",
@@ -85,12 +116,11 @@ function fetchInterruptions() {
 }
 
 function fetchData() {
-  console.log("Fetching data...");
-  console.log("Current time:", new Date().toLocaleTimeString());
   if (document.hidden) {
     console.log("Window is not active, skipping data fetch.");
     return;
   }
+  console.log("Current time:", new Date().toLocaleTimeString());
   fetch(`/proxy/gps`)
     .then((res) => res.text())
     .then((data) => {
@@ -113,10 +143,22 @@ function fetchData() {
         ] = line.split(",");
 
         const key = `${type}-${vehicleId}`;
-        seen.add(key);
 
         const latNum = parseFloat(lat) / 1e6;
         const lonNum = parseFloat(lon) / 1e6;
+
+        gpsLocations[key] = {
+          type,
+          lineNum,
+          lonNum,
+          latNum,
+          direction,
+          vehicleId,
+          tripId,
+          destination,
+        };
+
+        seen.add(key);
 
         // Check if interruption for this type and line
         const wholeInterruptionKey = `${lineNum}-${vehiclesInEstonian[type]}-both`;
@@ -134,52 +176,44 @@ function fetchData() {
               : interruptions[partialInterruptionKey];
           const info = interruption.info || "";
           announcement = interruption.announcement || "";
-          if (announcement) {
-            announcement = "<br>" + announcement;
+          if (info) {
+            announcement = "<br>" + info + "<br>" + announcement;
           }
           ongoingInterruption = true;
         }
 
         if (markers[key]) {
-          if (lastUpdate && Date.now() - lastUpdate > 30000) {
+          if (lastUpdate && Date.now() - lastUpdate > 15000) {
             // Avoid animation after user returns to the page
-            console.log("Skip animation, set lon lat directly");
             markers[key].setLatLng([latNum, lonNum]);
             textMarkers[key].setLatLng([latNum, lonNum]);
             popups[key].setLatLng([latNum, lonNum]);
           } else {
             const options = {
               key,
-              latNum,
-              lonNum,
-              direction,
+              announcement,
             };
             markerAnimation(options);
           }
         } else {
           const options = {
             key,
-            latNum,
-            lonNum,
-            lineNum,
             ongoingInterruption,
-            type,
-            destination,
             announcement,
-            direction,
           };
           markerCreation(options);
         }
       });
       lastUpdate = Date.now();
 
-      // Remove markers that weren't updated this cycle
+      // Remove data that is no longer seen
       for (const key in markers) {
         if (!seen.has(key)) {
           map.removeLayer(markers[key]);
           map.removeLayer(textMarkers[key]);
           delete markers[key];
           delete textMarkers[key];
+          delete gpsLocations[key];
         }
       }
     })
@@ -188,28 +222,48 @@ function fetchData() {
     });
 }
 
-async function vehicleLabelCallback(vehicleType, lineNumber, destination) {
+async function vehicleLabelCallback(key) {
   if (previousRoute) {
     map.removeLayer(previousRoute);
     previousRoute = null;
   }
   const routeCoordinates = await fetchRouteData(
-    vehicleType,
-    lineNumber,
-    destination
+    gpsLocations[key].type,
+    gpsLocations[key].lineNum,
+    gpsLocations[key].destination
   );
   previousRoute = drawRoute(map, routeCoordinates);
 }
 
 function markerAnimation(options) {
-  const { key, latNum, lonNum, direction } = options;
+  const { key, announcement } = options;
   // Animate to new position
   const currentLatLng = markers[key].getLatLng();
-  const newLatLng = L.latLng(latNum, lonNum);
+  const newLatLng = L.latLng(
+    gpsLocations[key].latNum,
+    gpsLocations[key].lonNum
+  );
 
   // Smooth movement animation
   let startTime = null;
   const duration = 6000; // 6 seconds
+
+  // if popups content does not contain current destination, update it
+  if (!popups[key].getContent().includes(gpsLocations[key].destination)) {
+    console.log(
+      `Updating popup content from ${popups[key].getContent()} to ${
+        gpsLocations[key].destination
+      }, ${announcement}, ${gpsLocations[key].type}, ${
+        gpsLocations[key].lineNum
+      }`
+    );
+    // Update popup content
+    popups[key].setContent(
+      `${vehiclesInEstonian[gpsLocations[key].type]} ${
+        gpsLocations[key].lineNum
+      } → ${gpsLocations[key].destination} ${announcement}`
+    );
+  }
 
   function animateMarker(timestamp) {
     if (!markers[key] || !textMarkers[key]) return;
@@ -226,7 +280,7 @@ function markerAnimation(options) {
     if (markerElement) {
       const imgElement = markerElement.querySelector("img");
       if (imgElement) {
-        imgElement.style.transform = `rotate(${direction}deg)`;
+        imgElement.style.transform = `rotate(${gpsLocations[key].direction}deg)`;
       }
     }
 
@@ -243,45 +297,29 @@ function markerAnimation(options) {
 }
 
 function markerCreation(options) {
-  const {
-    key,
-    latNum,
-    lonNum,
-    lineNum,
-    ongoingInterruption,
-    type,
-    destination,
-    announcement,
-    direction,
-  } = options;
+  const { key, ongoingInterruption, announcement } = options;
 
-  const vehicleType = vehiclesInEstonian[type];
-  const label = `${vehicleType} ${lineNum} → ${destination} ${announcement}`;
+  const vehicleType = vehiclesInEstonian[gpsLocations[key].type] || "Muu";
+  const label = `${vehicleType} ${gpsLocations[key].lineNum} → ${gpsLocations[key].destination} ${announcement}`;
 
   const iconType = vehicleType;
   const iconName = `${iconType}${ongoingInterruption ? "Warning" : ""}Icon.svg`;
   const vehicleIcon = L.divIcon({
-    html: `<img src="../assets/${iconName}" style="width: 24px; height: 24px; transform: rotate(${direction}deg); transition: transform 1s ease;" />`,
+    html: `<img src="../assets/${iconName}" style="width: 24px; height: 24px; transform: rotate(${gpsLocations[key].direction}deg); transition: transform 1s ease;" />`,
     className: `vehicle-${key}`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
-
   const popup = L.popup({ autoPan: false })
-    .setLatLng([latNum, lonNum])
+    .setLatLng([gpsLocations[key].latNum, gpsLocations[key].lonNum])
     .setContent(label);
   popups[key] = popup;
-  markers[key] = L.marker([latNum, lonNum], {
-    icon: vehicleIcon,
-    riseOnHover: true,
-    riseOffset: 100,
-  })
-    .addTo(map)
-    .on("click", () => {
-      map.closePopup(); // close previous popup
-      popup.openOn(map);
-      vehicleLabelCallback(type, lineNum, destination);
-    });
+  markers[key] = L.marker(
+    [gpsLocations[key].latNum, gpsLocations[key].lonNum],
+    {
+      icon: vehicleIcon,
+    }
+  ).addTo(map);
 
   popup.on("remove", () => {
     console.log(`Popup for ${key} closed.`);
@@ -292,20 +330,25 @@ function markerCreation(options) {
   const divIcon = L.divIcon({
     html: `<div style="color: ${
       ongoingInterruption ? "yellow" : "white"
-    }; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px; transition: all 1s ease;">${lineNum}</div>`,
+    }; font-weight: bold; font-size: 10px; text-align: center; line-height: 24px; transition: all 1s ease;">${
+      gpsLocations[key].lineNum
+    }</div>`,
     className: "",
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   });
 
-  textMarkers[key] = L.marker([latNum, lonNum], {
-    icon: divIcon,
-  })
+  textMarkers[key] = L.marker(
+    [gpsLocations[key].latNum, gpsLocations[key].lonNum],
+    {
+      icon: divIcon,
+    }
+  )
     .addTo(map)
     .on("click", () => {
       map.closePopup(); // optional: close previous popup
       popup.openOn(map);
-      vehicleLabelCallback(type, lineNum, destination);
+      vehicleLabelCallback(key);
     });
 }
 
@@ -328,6 +371,13 @@ function drawRoute(map, routePoints) {
   }).addTo(map);
   return polyline;
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    console.log("Window is active, fetching data again.");
+    fetchData();
+  }
+});
 
 fetchInterruptions();
 fetchData();
