@@ -44,7 +44,7 @@ app.get(
   }
 );
 
-app.get("/route", cache("1 day"), async (req, res) => {
+app.get("/route", cache("6 hours"), async (req, res) => {
   const { line, destination, type } = req.query;
 
   if (!line || !destination || !type) {
@@ -54,7 +54,11 @@ app.get("/route", cache("1 day"), async (req, res) => {
   }
 
   try {
-    const coords = await utils.getRouteCoordinates({ line, destination, type });
+    const coords = await utils.getRouteCoordinatesFromDB({
+      line,
+      destination,
+      type,
+    });
     res.json(coords);
   } catch (err) {
     res.status(500).json({ error: err.message });
