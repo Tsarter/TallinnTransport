@@ -156,7 +156,6 @@ def fetch_daily_data():
             bus_time_data = fetch_bus_times_data()
             fetch_stops_data()
             get_routes_data(bus_time_data)
-            print("done")
             insert_routes_geom()
             notify_discord()
         except Exception as e:

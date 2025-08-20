@@ -85,11 +85,11 @@ def save_to_database(data, datetime):
                 unknown2_ = str(unknown2)
                 speed = int(calculate_speed(row, datetime))
             except ValueError:
-                print("Invalid record:",datetime, row, flush=True)
+                print("Invalid record:",datetime, row)
                 continue
             except ZeroDivisionError:
                 # datetime also in logs
-                print("Invalid record:",datetime, row, flush=True)
+                print("Invalid record:",datetime, row)
                 continue
 
             geom = f"SRID=4326;POINT({longitude_} {latitude_})"
@@ -116,7 +116,7 @@ def save_to_database(data, datetime):
         execute_values(pg_cursor, insert_query, records)
         pg_conn.commit()  # Commit after each batch
     except Exception as e:
-        print("Database error:", e, flush=True)
+        print("Database error:", e)
     finally:
         if pg_cursor:
             pg_cursor.close()
