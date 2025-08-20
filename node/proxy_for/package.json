@@ -13,8 +13,12 @@
     "apicache": "^1.6.3",
     "cors": "^2.8.5",
     "csv-parse": "^6.1.0",
+    "dotenv": "^17.2.1",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.3",
-    "unzipper": "^0.12.3"
+    "knex": "^3.1.0",
+    "pg": "^8.16.3",
+    "unzipper": "^0.12.3",
+    "wkx": "^0.5.0"
   }
 }
