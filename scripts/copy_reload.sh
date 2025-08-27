@@ -6,7 +6,7 @@ DEST_DIR="/var/www/web_server/"
 
 # Copy files from source to destination
 if [ -d "$SOURCE_DIR" ]; then
-    sudo cp -r "$SOURCE_DIR"* "$DEST_DIR"
+    sudo rsync -av --delete "$SOURCE_DIR"* "$DEST_DIR"
     echo "Files copied from $SOURCE_DIR to $DEST_DIR"
     sudo systemctl reload nginx
     echo "Nginx reloaded."
