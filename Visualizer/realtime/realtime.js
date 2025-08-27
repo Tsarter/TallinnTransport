@@ -4,6 +4,13 @@ let userLocationMarker = null;
 let userLat = null;
 let userLon = null;
 let userZoom = 15; // Default zoom level for user location
+let userDevice = null; // Mobile or Desktop
+
+if (/Mobi|Android/i.test(navigator.userAgent)) {
+  userDevice = "Mobile";
+} else {
+  userDevice = "Desktop";
+}
 
 function geolocationSuccessWatch(position) {
   userLat = position.coords.latitude;
@@ -69,14 +76,63 @@ const textMarkers = {};
 const popups = {};
 const interruptions = {};
 const gpsLocations = {};
+let stops = {}
+const stopMarkers = {}
 let previousRoute = null;
 const previousDestinations = {};
+const previousZoom = userZoom;
 const vehiclesInEstonian = {
   3: "Tramm",
   10: "Rong",
   2: "Buss",
 };
-let lastUpdate = Date.now();
+let lastUpdate = 0;
+
+function createStopMarker(stopData) {
+  const stopIcon = L.divIcon({
+    html: `<img class="stop-icon-img" src="../assets/StopIcon.svg" style="width: 14px; height: 14px;" />`,
+  iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      className: "stop-icon",
+  });
+
+  const stopMarker = L.marker([stopData.lat, stopData.lon], {
+    icon: stopIcon,
+  })
+    .bindPopup(`${stopData.stop_name}`)
+
+  stopMarkers[stopData.stop_code] = stopMarker;
+}
+
+function createStopMarkers(stopsArray) {
+  stopsArray.forEach((stop) => {
+    createStopMarker(stop);
+
+  });
+}
+
+function updateVisibleStopMarkers() {
+  const bounds = map.getBounds();
+  const zoom = map.getZoom();
+  Object.values(stops).forEach(stop => {
+    const latlng = L.latLng(stop.lat, stop.lon);
+    if (bounds.contains(latlng) && ((userDevice == "Desktop" && zoom >= 15) || (userDevice == "Mobile" && zoom >= 14))) {
+      stopMarkers[stop.stop_code].addTo(map);
+    } else if (map.hasLayer(stopMarkers[stop.stop_code])) {
+      map.removeLayer(stopMarkers[stop.stop_code]);
+    }
+  });
+}
+
+
+function fetchStops() {
+  fetch("/proxy/stops2")
+  .then((res)=> res.json())
+  .then((data) => {
+    stops = data;
+    createStopMarkers(stops);
+  })
+}
 
 function fetchInterruptions() {
   fetch("/transport_data/transport_data/interruptions_data/ongoing.json")
@@ -379,6 +435,9 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+fetchStops();
 fetchInterruptions();
 fetchData();
 setInterval(fetchData, 6000);
+updateVisibleStopMarkers();
+map.on("moveend", updateVisibleStopMarkers);

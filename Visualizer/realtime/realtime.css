@@ -17,3 +17,7 @@ body {
     background: none;
     border: none;
 }
+
+.stop-icon {
+  z-index: 1 !important;  /* set low stacking order */
+}
