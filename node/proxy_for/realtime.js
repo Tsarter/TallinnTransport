@@ -4,19 +4,19 @@ Workaround for the cors.
 Proxied from nginx 
 */
 
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
 
-const apicache = require("apicache");
+import apicache from "apicache";
 apicache.options({ headers: { "Cache-Control": "public, max-age=10" } }); // Set default cache headers
 let cache = apicache.middleware;
-const utils = require("./utils/routeUtils.js");
+import { getRouteCoordinatesFromDB } from "./utils/routeUtils.js";
+import { getStopsFromDB, getNextDeparturesByStopId } from "./utils/stopsUtils.js";
 
+apicache.clear();
 const app = express();
 app.use(cors());
 
-let counter = 0;
-let timeSinceLastRequest = Date.now();
 // Configure the proxy middleware
 app.get(
   "/gps",
@@ -54,12 +54,36 @@ app.get("/route", cache("6 hours"), async (req, res) => {
   }
 
   try {
-    const coords = await utils.getRouteCoordinatesFromDB({
+    const coords = await getRouteCoordinatesFromDB({
       line,
       destination,
       type,
     });
     res.json(coords);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+ 
+app.get("/stops", async (_, res) => {
+  try {
+    const stops = await getStopsFromDB();
+    res.json(stops);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/stops/:stopId/departures", async (req, res) => {
+  try {
+    const stopId = parseInt(req.params.stopId, 10);
+    const limit = parseInt(req.query.limit, 10) || 5;
+    if (isNaN(stopId)) {
+      return res.status(400).json({ error: "Invalid or missing stopId" });
+    }
+
+    const departures = await getNextDeparturesByStopId(stopId, limit);
+    res.json(departures);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
