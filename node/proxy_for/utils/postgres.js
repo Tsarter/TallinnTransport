@@ -1,10 +1,13 @@
-const path = require("path");
+import path from "path";
+import dotenv from "dotenv";
+import knex from "knex";
 
-require("dotenv").config({ path: path.join(__dirname, "../../.env") });
+import { fileURLToPath } from "url";
 
-const knex = require("knex");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-const db = knex({
+export const db = knex({
   client: "postgresql",
   connection: {
     host: process.env.POSTGRES_HOST || "127.0.0.1",
@@ -15,5 +18,3 @@ const db = knex({
   },
   pool: { min: 2, max: 10 },
 });
-
-module.exports = db;
