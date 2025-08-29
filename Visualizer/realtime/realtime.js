@@ -91,15 +91,36 @@ let lastUpdate = 0;
 function createStopMarker(stopData) {
   const stopIcon = L.divIcon({
     html: `<img class="stop-icon-img" src="../assets/StopIcon.svg" style="width: 14px; height: 14px;" />`,
-  iconSize: [14, 14],
-      iconAnchor: [7, 7],
-      className: "stop-icon",
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    className: "stop-icon",
   });
 
   const stopMarker = L.marker([stopData.lat, stopData.lon], {
     icon: stopIcon,
   })
-    .bindPopup(`${stopData.stop_name}`)
+    .bindPopup(`${stopData.stop_name}`);
+
+  stopMarker.on("click", async () => {
+    let popupContent = `<strong>${stopData.stop_name}</strong>`;
+    try {
+      const departures = await fetchStopDepartures(stopData.stop_id);
+      console.log("departures", departures)
+      if (departures && Array.isArray(departures) && departures.length > 0) {
+        popupContent += "<br><br><strong>Väljumised:</strong><ul>";
+        departures.forEach(dep => {
+          popupContent += `<li>${dep.route_short_name} → ${dep.trip_headsign} (${dep.departure_time})</li>`;
+        });
+        popupContent += "</ul>";
+      } else {
+        popupContent += "<br><br>Väljumisi ei leitud.";
+      }
+    } catch (e) {
+      popupContent += "<br><br>Väljumisi ei leitud.";
+    }
+    stopMarker.getPopup().setContent(popupContent);
+    stopMarker.openPopup();
+  });
 
   stopMarkers[stopData.stop_code] = stopMarker;
 }
@@ -126,12 +147,27 @@ function updateVisibleStopMarkers() {
 
 
 function fetchStops() {
-  fetch("/proxy/stops2")
+  fetch("/proxy/stops")
   .then((res)=> res.json())
   .then((data) => {
     stops = data;
     createStopMarkers(stops);
-  })
+  }).catch((error) => {
+    console.error("Error fetching stops:", error);
+  });
+}
+
+async function fetchStopDepartures(stopId) {
+  let stopDepartures = []
+  await fetch(`/proxy/stops/${stopId}/departures?limit=5`)
+    .then((res) => res.json())
+    .then((data) => {
+      stopDepartures = data;
+    })
+    .catch((error) => {
+      console.error("Error fetching stop departures:", error);
+    });
+  return stopDepartures;
 }
 
 function fetchInterruptions() {
