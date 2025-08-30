@@ -85,8 +85,79 @@ const vehiclesInEstonian = {
   3: "Tramm",
   10: "Rong",
   2: "Buss",
+  7: "Buss",
 };
+const vehiclesEnglishToEstonian = {
+  "tram": "Tramm",
+  "bus": "Buss",
+  "rong": "Rong"
+}
 let lastUpdate = 0;
+function minutesUntilDeparture(hhmmss) {
+  const [h, m, s] = hhmmss.split(":").map(Number);
+
+  const now = new Date();
+  const departure = new Date(now);
+
+  departure.setHours(h, m, s, 0);
+
+  let diffMs = departure - now;
+
+  // If departure is "past midnight" (e.g. GTFS 24:xx:xx or tomorrow)
+  if (diffMs < 0) {
+    departure.setDate(departure.getDate() + 1);
+    diffMs = departure - now;
+  }
+
+  return Math.floor(diffMs / 60000); // minutes
+}
+
+function formattedDepartureTime(hhmmss){
+  // Format departure time to show only hours and rounded minutes, no seconds
+  let [h, m, s] = hhmmss.split(":").map(Number);
+  if (s >= 30) m += 1;
+  if (m === 60) {
+  m = 0;
+  h += 1;
+  }
+  const formattedTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  return formattedTime;
+}
+async function createStopMarkerPopUp(stopData, stopMarker){
+  let popupContent = `<div class="stop-popup">${stopData.stop_name}</div>`;
+    try {
+      const departures = await fetchStopDepartures(stopData.stop_id);
+      if (departures && Array.isArray(departures) && departures.length > 0) {
+        departures.forEach(dep => {
+          
+            const formattedTime = formattedDepartureTime(dep.departure_time);
+            const timeTilDeparture = minutesUntilDeparture(dep.departure_time);
+            const vehcileType = vehiclesEnglishToEstonian[dep.route_id.split("_")[1]]
+            popupContent += `
+            <div class="stop-popup-departure-row">
+              <div class="bus-icon-wrapper">
+                <img src="../assets/${vehcileType}Icon.svg" class="bus-icon"/>
+                <span class="bus-icon-text">${dep.route_short_name}</span>
+              </div>
+              <div class="stop-popup-departure-info">
+                <div>${dep.trip_headsign}</div> 
+                <div>${formattedTime}</div>
+              </div>
+            <div>
+            ${timeTilDeparture} min
+            </div>
+            </div>`;
+        });
+        popupContent += "</div>";
+      } else {
+        popupContent += "<br><br>Väljumisi ei leitud.";
+      }
+    } catch (e) {
+      popupContent += "<br><br>Väljumisi ei leitud.";
+    }
+    stopMarker.getPopup().setContent(popupContent);
+    stopMarker.openPopup();
+}
 
 function createStopMarker(stopData) {
   const stopIcon = L.divIcon({
@@ -102,24 +173,7 @@ function createStopMarker(stopData) {
     .bindPopup(`${stopData.stop_name}`);
 
   stopMarker.on("click", async () => {
-    let popupContent = `<strong>${stopData.stop_name}</strong>`;
-    try {
-      const departures = await fetchStopDepartures(stopData.stop_id);
-      console.log("departures", departures)
-      if (departures && Array.isArray(departures) && departures.length > 0) {
-        popupContent += "<br><br><strong>Väljumised:</strong><ul>";
-        departures.forEach(dep => {
-          popupContent += `<li>${dep.route_short_name} → ${dep.trip_headsign} (${dep.departure_time})</li>`;
-        });
-        popupContent += "</ul>";
-      } else {
-        popupContent += "<br><br>Väljumisi ei leitud.";
-      }
-    } catch (e) {
-      popupContent += "<br><br>Väljumisi ei leitud.";
-    }
-    stopMarker.getPopup().setContent(popupContent);
-    stopMarker.openPopup();
+    createStopMarkerPopUp(stopData, stopMarker);
   });
 
   stopMarkers[stopData.stop_code] = stopMarker;
