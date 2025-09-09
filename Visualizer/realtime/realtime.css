@@ -3,6 +3,10 @@ body {
     padding: 0;
 }
 
+body, html, * {
+    font-family: "Roboto", sans-serif !important;
+}
+
 #map {
         height: 100vh;
         width: 100%;
@@ -21,15 +25,17 @@ body {
 .stop-icon {
   z-index: 1 !important;  /* set low stacking order */
 }
-.stop-popup{
-  padding-left: 10px;
-}
 
+.stop-popup-header{
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
 .stop-popup-departure-row{
   display: flex;
   align-items: center;
   gap: 10px;
-  
+  margin-top: 15px;
 }
 .stop-popup-departure-info{
   display: flex;
@@ -38,8 +44,8 @@ body {
 }
 .bus-icon-wrapper {
   position: relative;
-  width: 25px;
-  height: 25px;
+  width: 29px;
+  height: 29px;
   display: inline-block;
 }
 
@@ -47,6 +53,7 @@ body {
   width: 100%;
   height: 100%;
   display: block;
+  filter: drop-shadow(1px 1px 2px rgba(175, 94, 1, 0.3))
 }
 
 .bus-icon-text {
@@ -58,4 +65,13 @@ body {
   font-weight: bold;
   color: white;                      /* or black depending on icon */
   pointer-events: none;              /* clicks pass through to the icon */
+}
+
+.realtime-time {
+    color: green;
+    font-weight: bold;
+}
+
+.scheduled-time {
+    font-weight: bold;
 }

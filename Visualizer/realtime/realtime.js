@@ -71,13 +71,15 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 18,
 }).addTo(map);
 
+let selectedStop = null;
+let selectedRoute = { type: null, line: null, destination: null };
 const markers = {};
 const textMarkers = {};
 const popups = {};
 const interruptions = {};
 const gpsLocations = {};
-let stops = {}
-const stopMarkers = {}
+let stops = {};
+const stopMarkers = {};
 let previousRoute = null;
 const previousDestinations = {};
 const previousZoom = userZoom;
@@ -88,10 +90,17 @@ const vehiclesInEstonian = {
   7: "Buss",
 };
 const vehiclesEnglishToEstonian = {
-  "tram": "Tramm",
-  "bus": "Buss",
-  "rong": "Rong"
-}
+  tram: "Tramm",
+  bus: "Buss",
+  regionalbus: "Buss",
+  train: "Rong",
+};
+const vehiclesEnglishToNum = {
+  tram: 3,
+  bus: 2,
+  regionalbus: 2,
+  train: 10,
+};
 let lastUpdate = 0;
 function minutesUntilDeparture(hhmmss) {
   const [h, m, s] = hhmmss.split(":").map(Number);
@@ -112,51 +121,182 @@ function minutesUntilDeparture(hhmmss) {
   return Math.floor(diffMs / 60000); // minutes
 }
 
-function formattedDepartureTime(hhmmss){
+function formattedDepartureTime(hhmmss) {
   // Format departure time to show only hours and rounded minutes, no seconds
   let [h, m, s] = hhmmss.split(":").map(Number);
   if (s >= 30) m += 1;
   if (m === 60) {
-  m = 0;
-  h += 1;
+    m = 0;
+    h += 1;
   }
-  const formattedTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  const formattedTime = `${h.toString().padStart(2, "0")}:${m
+    .toString()
+    .padStart(2, "0")}`;
   return formattedTime;
 }
-async function createStopMarkerPopUp(stopData, stopMarker){
-  let popupContent = `<div class="stop-popup">${stopData.stop_name}</div>`;
-    try {
-      const departures = await fetchStopDepartures(stopData.stop_id);
-      if (departures && Array.isArray(departures) && departures.length > 0) {
-        departures.forEach(dep => {
-          
-            const formattedTime = formattedDepartureTime(dep.departure_time);
-            const timeTilDeparture = minutesUntilDeparture(dep.departure_time);
-            const vehcileType = vehiclesEnglishToEstonian[dep.route_id.split("_")[1]]
-            popupContent += `
-            <div class="stop-popup-departure-row">
+
+function stopPopupRowCallback(type, lineNum, destination) {
+  addRouteToMap(type, lineNum, destination);
+  selectedRoute = { type, line: lineNum, destination };
+}
+async function createStopMarkerPopUp(stopData, stopMarker) {
+  let popupContent = `<div class="stop-popup-header">${stopData.stop_name}</div>`;
+  try {
+    const departures = await fetchStopDepartures(stopData.stop_id);
+
+    if (departures && Array.isArray(departures) && departures.length > 0) {
+      const grouped = {};
+      departures.forEach((dep) => {
+        if (!grouped[dep.route_id]) grouped[dep.route_id] = [];
+        grouped[dep.route_id].push(dep);
+      });
+
+      for (const [_, deps] of Object.entries(grouped)) {
+        deps.sort(
+          (a, b) =>
+            minutesUntilDeparture(a.departure_time) -
+            minutesUntilDeparture(b.departure_time)
+        );
+        const top3 = deps.slice(0, 3);
+        const first = top3[0];
+
+        const vehicleTypeEstonian =
+          vehiclesEnglishToEstonian[first.route_id.split("_")[1]];
+        const vehcileTypeNum =
+          vehiclesEnglishToNum[first.route_id.split("_")[1]];
+        const { ongoingInterruption, announcement } = checkInterruption({
+          lineNum: first.route_short_name,
+          type: vehcileTypeNum,
+          destination: first.trip_headsign,
+          noLineBreaks: true,
+        });
+        console.log(
+          "Ongoung interrupiton",
+          ongoingInterruption,
+          first.route_short_name,
+          first.route_id.split("_")[1],
+          vehiclesEnglishToNum[first.route_id.split("_")[1]],
+          first.trip_headsign
+        );
+        const vehicleIconName = chooseVehicleIcon({
+          iconType: vehicleTypeEstonian,
+          ongoingInterruption,
+        });
+        const earliestTil = minutesUntilDeparture(first.departure_time);
+
+        // format all times for this route
+        const timesHtml = top3
+          .map((d) => `${formattedDepartureTime(d.departure_time)}`)
+          .join(" ");
+        const isRealtime = first.scheduled_time !== first.departure_time;
+        console.log(
+          "isRealtime",
+          first.route_short_name,
+          isRealtime,
+          first.scheduled_time,
+          first.departure_time
+        );
+        const timeClass = isRealtime ? "realtime-time" : "scheduled-time";
+        popupContent += `
+            <div class="stop-popup-departure-row" onClick="stopPopupRowCallback('${vehcileTypeNum}', '${
+          first.route_short_name
+        }', '${first.trip_headsign}')">
               <div class="bus-icon-wrapper">
-                <img src="../assets/${vehcileType}Icon.svg" class="bus-icon"/>
-                <span class="bus-icon-text">${dep.route_short_name}</span>
+                <img src="../assets/${vehicleIconName}" class="bus-icon"/>
+                <span class="bus-icon-text">${first.route_short_name}</span>
               </div>
               <div class="stop-popup-departure-info">
-                <div>${dep.trip_headsign}</div> 
-                <div>${formattedTime}</div>
+                <div style="font-weight: bolder">${first.trip_headsign}</div> 
+                <div class="departure-times">${timesHtml}</div>
               </div>
-            <div>
-            ${timeTilDeparture} min
+              <div class="${timeClass}">
+                ${earliestTil} min
+              </div>
             </div>
-            </div>`;
-        });
-        popupContent += "</div>";
-      } else {
-        popupContent += "<br><br>Väljumisi ei leitud.";
+            ${
+              ongoingInterruption
+                ? `<div class="stop-popup-interruption">${announcement}</div>`
+                : ""
+            }`;
       }
-    } catch (e) {
+      popupContent += "</div>";
+    } else {
       popupContent += "<br><br>Väljumisi ei leitud.";
     }
-    stopMarker.getPopup().setContent(popupContent);
-    stopMarker.openPopup();
+  } catch (e) {
+    console.error("Error fetching stop departures:", e);
+    popupContent += "<br><br>Väljumisi ei leitud.";
+  }
+  stopMarker.getPopup().setContent(popupContent);
+  stopMarker.openPopup();
+
+  let mapClickCounter = 0;
+  stopMarker.getPopup().on("remove", () => {
+    console.log(`Popup for stop ${stopData.stop_id} closed.`);
+    mapClickCounter = 1;
+  });
+  map.on("click", function onMapClick() {
+    if (mapClickCounter >= 2) {
+      mapClickCounter = 0;
+      selectedRoute = { type: null, line: null, destination: null };
+      selectedStop = null;
+      if (previousRoute) {
+        map.removeLayer(previousRoute);
+        previousRoute = null;
+      }
+      map.off("click", onMapClick);
+    } else {
+      mapClickCounter++;
+    }
+  });
+}
+
+function checkInterruption(options) {
+  const { lineNum, type, destination, noLineBreaks } = options;
+
+  // Check if interruption for this type and line
+  const wholeInterruptionKey = `${lineNum}-${vehiclesInEstonian[type]}-both`;
+  const partialInterruptionKey = `${lineNum}-${vehiclesInEstonian[type]}-${destination}`;
+
+  let announcement = "";
+  let ongoingInterruption = false;
+  if (
+    wholeInterruptionKey in interruptions ||
+    partialInterruptionKey in interruptions
+  ) {
+    const interruption =
+      wholeInterruptionKey in interruptions
+        ? interruptions[wholeInterruptionKey]
+        : interruptions[partialInterruptionKey];
+    const info = interruption.info || "";
+    announcement = interruption.announcement || "";
+    if (info) {
+      announcement = noLineBreaks
+        ? info + " " + announcement
+        : "<br>" + info + "<br>" + announcement;
+    }
+    ongoingInterruption = true;
+  }
+  return { announcement, ongoingInterruption };
+}
+
+function chooseVehicleIcon(options) {
+  const { iconType, ongoingInterruption } = options;
+  const iconName = `${iconType}${ongoingInterruption ? "Warning" : ""}Icon.svg`;
+  return iconName;
+}
+
+function createVehicleIcon(options) {
+  const { key, ongoingInterruption, style } = options;
+  const iconType = vehiclesInEstonian[gpsLocations[key].type] || "Buss";
+  const iconName = chooseVehicleIcon({ iconType, ongoingInterruption });
+  const vehicleIcon = L.divIcon({
+    html: `<img src="../assets/${iconName}" style="${style}" />`,
+    className: `vehicle-${key}`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+  return vehicleIcon;
 }
 
 function createStopMarker(stopData) {
@@ -169,10 +309,17 @@ function createStopMarker(stopData) {
 
   const stopMarker = L.marker([stopData.lat, stopData.lon], {
     icon: stopIcon,
-  })
-    .bindPopup(`${stopData.stop_name}`);
+  }).bindPopup(`${stopData.stop_name}`);
 
   stopMarker.on("click", async () => {
+    if (!selectedStop || selectedStop.stop_id !== stopData.stop_id) {
+      if (previousRoute) {
+        map.removeLayer(previousRoute);
+        previousRoute = null;
+      }
+      selectedRoute = { type: null, line: null, destination: null };
+    }
+    selectedStop = stopData;
     createStopMarkerPopUp(stopData, stopMarker);
   });
 
@@ -182,16 +329,22 @@ function createStopMarker(stopData) {
 function createStopMarkers(stopsArray) {
   stopsArray.forEach((stop) => {
     createStopMarker(stop);
-
   });
 }
 
 function updateVisibleStopMarkers() {
   const bounds = map.getBounds();
   const zoom = map.getZoom();
-  Object.values(stops).forEach(stop => {
+  Object.values(stops).forEach((stop) => {
+    if (selectedStop && stop.stop_id === selectedStop.stop_id) {
+      return;
+    }
     const latlng = L.latLng(stop.lat, stop.lon);
-    if (bounds.contains(latlng) && ((userDevice == "Desktop" && zoom >= 15) || (userDevice == "Mobile" && zoom >= 14))) {
+    if (
+      bounds.contains(latlng) &&
+      ((userDevice == "Desktop" && zoom >= 15) ||
+        (userDevice == "Mobile" && zoom >= 14))
+    ) {
       stopMarkers[stop.stop_code].addTo(map);
     } else if (map.hasLayer(stopMarkers[stop.stop_code])) {
       map.removeLayer(stopMarkers[stop.stop_code]);
@@ -199,21 +352,21 @@ function updateVisibleStopMarkers() {
   });
 }
 
-
 function fetchStops() {
   fetch("/proxy/stops")
-  .then((res)=> res.json())
-  .then((data) => {
-    stops = data;
-    createStopMarkers(stops);
-  }).catch((error) => {
-    console.error("Error fetching stops:", error);
-  });
+    .then((res) => res.json())
+    .then((data) => {
+      stops = data;
+      createStopMarkers(stops);
+    })
+    .catch((error) => {
+      console.error("Error fetching stops:", error);
+    });
 }
 
 async function fetchStopDepartures(stopId) {
-  let stopDepartures = []
-  await fetch(`/proxy/stops/${stopId}/departures?limit=5`)
+  let stopDepartures = [];
+  await fetch(`/proxy/stops/${stopId}/departures?limit=10`)
     .then((res) => res.json())
     .then((data) => {
       stopDepartures = data;
@@ -222,6 +375,19 @@ async function fetchStopDepartures(stopId) {
       console.error("Error fetching stop departures:", error);
     });
   return stopDepartures;
+}
+
+async function fetchRealtimeStopDepartures(stopId) {
+  let realtimeStopDepartures = [];
+  await fetch(`/proxy/stops/${stopId}/departures/realtime?limit=10`)
+    .then((res) => res.json())
+    .then((data) => {
+      realtimeStopDepartures = data;
+    })
+    .catch((error) => {
+      console.error("Error fetching stop departures:", error);
+    });
+  return realtimeStopDepartures;
 }
 
 function fetchInterruptions() {
@@ -261,6 +427,17 @@ function fetchInterruptions() {
     });
 }
 
+/**
+ * Generates a unique key string by combining the vehicle type and vehicle ID.
+ *
+ * @param {number} type
+ * @param {number} vehicleId
+ * @returns {string}
+ */
+function getKey(type, vehicleId) {
+  return `${type}-${vehicleId}`;
+}
+
 function fetchData() {
   if (document.hidden) {
     console.log("Window is not active, skipping data fetch.");
@@ -287,8 +464,7 @@ function fetchData() {
           tripId,
           destination,
         ] = line.split(",");
-
-        const key = `${type}-${vehicleId}`;
+        const key = getKey(type, vehicleId);
 
         const latNum = parseFloat(lat) / 1e6;
         const lonNum = parseFloat(lon) / 1e6;
@@ -305,28 +481,11 @@ function fetchData() {
         };
 
         seen.add(key);
-
-        // Check if interruption for this type and line
-        const wholeInterruptionKey = `${lineNum}-${vehiclesInEstonian[type]}-both`;
-        const partialInterruptionKey = `${lineNum}-${vehiclesInEstonian[type]}-${destination}`;
-
-        let announcement = "";
-        let ongoingInterruption = false;
-        if (
-          wholeInterruptionKey in interruptions ||
-          partialInterruptionKey in interruptions
-        ) {
-          const interruption =
-            wholeInterruptionKey in interruptions
-              ? interruptions[wholeInterruptionKey]
-              : interruptions[partialInterruptionKey];
-          const info = interruption.info || "";
-          announcement = interruption.announcement || "";
-          if (info) {
-            announcement = "<br>" + info + "<br>" + announcement;
-          }
-          ongoingInterruption = true;
-        }
+        const { announcement, ongoingInterruption } = checkInterruption({
+          lineNum,
+          type,
+          destination,
+        });
 
         if (markers[key]) {
           if (lastUpdate && Date.now() - lastUpdate > 15000) {
@@ -368,16 +527,12 @@ function fetchData() {
     });
 }
 
-async function vehicleLabelCallback(key) {
+async function addRouteToMap(type, lineNum, destination) {
   if (previousRoute) {
     map.removeLayer(previousRoute);
     previousRoute = null;
   }
-  const routeCoordinates = await fetchRouteData(
-    gpsLocations[key].type,
-    gpsLocations[key].lineNum,
-    gpsLocations[key].destination
-  );
+  const routeCoordinates = await fetchRouteData(type, lineNum, destination);
   previousRoute = drawRoute(map, routeCoordinates);
 }
 
@@ -413,6 +568,25 @@ function markerAnimation(options) {
 
   function animateMarker(timestamp) {
     if (!markers[key] || !textMarkers[key]) return;
+
+    const markerElement = markers[key].getElement();
+    const textMarkerElement = textMarkers[key].getElement();
+
+    if (selectedRoute.line && selectedRoute.line != gpsLocations[key].lineNum) {
+      if (markerElement) {
+        markerElement.style.display = "none"; // Hide marker using CSS
+      }
+      if (textMarkerElement) {
+        textMarkerElement.style.display = "none"; // Hide text marker using CSS
+      }
+    } else {
+      if (markerElement) {
+        markerElement.style.display = "block"; // Show marker using CSS
+      }
+      if (textMarkerElement) {
+        textMarkerElement.style.display = "block"; // Show text marker using CSS
+      }
+    }
     if (!startTime) startTime = timestamp;
     const progress = Math.min((timestamp - startTime) / duration, 1);
 
@@ -422,7 +596,6 @@ function markerAnimation(options) {
       currentLatLng.lng + (newLatLng.lng - currentLatLng.lng) * progress;
 
     // Update rotation during animation using CSS
-    const markerElement = markers[key].getElement();
     if (markerElement) {
       const imgElement = markerElement.querySelector("img");
       if (imgElement) {
@@ -448,13 +621,11 @@ function markerCreation(options) {
   const vehicleType = vehiclesInEstonian[gpsLocations[key].type] || "Muu";
   const label = `${vehicleType} ${gpsLocations[key].lineNum} → ${gpsLocations[key].destination} ${announcement}`;
 
-  const iconType = vehicleType;
-  const iconName = `${iconType}${ongoingInterruption ? "Warning" : ""}Icon.svg`;
-  const vehicleIcon = L.divIcon({
-    html: `<img src="../assets/${iconName}" style="width: 24px; height: 24px; transform: rotate(${gpsLocations[key].direction}deg); transition: transform 1s ease;" />`,
-    className: `vehicle-${key}`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+  const vehicleIconStyle = `width: 24px; height: 24px; transform: rotate(${gpsLocations[key].direction}deg); transition: transform 1s ease;`;
+  const vehicleIcon = createVehicleIcon({
+    key,
+    ongoingInterruption,
+    style: vehicleIconStyle,
   });
   const popup = L.popup({ autoPan: false })
     .setLatLng([gpsLocations[key].latNum, gpsLocations[key].lonNum])
@@ -494,7 +665,12 @@ function markerCreation(options) {
     .on("click", () => {
       map.closePopup(); // optional: close previous popup
       popup.openOn(map);
-      vehicleLabelCallback(key);
+      addRouteToMap(
+        gpsLocations[key].type,
+        gpsLocations[key].lineNum,
+        gpsLocations[key].destination,
+        close
+      );
     });
 }
 
