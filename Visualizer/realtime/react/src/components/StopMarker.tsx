@@ -26,6 +26,9 @@ export const StopMarker = memo(function StopMarker({ stop }: StopMarkerProps) {
     });
   }, []);
 
+  // Memoize position to prevent array recreation
+  const position = useMemo<[number, number]>(() => [stop.lat, stop.lon], [stop.lat, stop.lon]);
+
   const handleOpen = useCallback(() => {
     setIsOpen(true);
   }, []);
@@ -34,14 +37,20 @@ export const StopMarker = memo(function StopMarker({ stop }: StopMarkerProps) {
     setIsOpen(false);
   }, []);
 
+  // Memoize event handlers object to prevent recreation
+  const eventHandlers = useMemo(
+    () => ({
+      click: handleOpen,
+      popupclose: handleClose,
+    }),
+    [handleOpen, handleClose]
+  );
+
   return (
     <Marker
-      position={[stop.lat, stop.lon]}
+      position={position}
       icon={icon}
-      eventHandlers={{
-        click: handleOpen,
-        popupclose: handleClose,
-      }}
+      eventHandlers={eventHandlers}
     >
       <Popup autoPan={false} maxWidth={400}>
         {isOpen ? <StopPopupContent stop={stop} /> : <div>{stop.stop_name}</div>}

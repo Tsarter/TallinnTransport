@@ -37,18 +37,29 @@ export const VehicleMarker = memo(function VehicleMarker({
     return null;
   }
 
-  // Check for service interruptions
-  const vehicleTypeEstonian = VEHICLE_TYPES_ESTONIAN[vehicle.type] || 'Buss';
-  const { announcement, ongoingInterruption } = checkInterruption(
-    interruptions,
-    vehicle.lineNum,
-    vehicleTypeEstonian,
-    vehicle.destination,
-    false
+  // Check for service interruptions (memoized to prevent recalculation)
+  const vehicleTypeEstonian = useMemo(
+    () => VEHICLE_TYPES_ESTONIAN[vehicle.type] || 'Buss',
+    [vehicle.type]
+  );
+
+  const { announcement, ongoingInterruption } = useMemo(
+    () =>
+      checkInterruption(
+        interruptions,
+        vehicle.lineNum,
+        vehicleTypeEstonian,
+        vehicle.destination,
+        false
+      ),
+    [interruptions, vehicle.lineNum, vehicleTypeEstonian, vehicle.destination]
   );
 
   // Get appropriate icon based on interruption status
-  const iconFileName = getVehicleIconName(vehicleTypeEstonian, ongoingInterruption);
+  const iconFileName = useMemo(
+    () => getVehicleIconName(vehicleTypeEstonian, ongoingInterruption),
+    [vehicleTypeEstonian, ongoingInterruption]
+  );
 
   // Animate marker when vehicle position changes
   useEffect(() => {
@@ -154,11 +165,17 @@ export const VehicleMarker = memo(function VehicleMarker({
     });
   }, [vehicle.lineNum, vehicle.key, iconFileName, ongoingInterruption]);
 
-  // Popup content
-  const popupContent = `${vehicleTypeEstonian} ${vehicle.lineNum} → ${vehicle.destination} ${announcement}`;
+  // Popup content (memoized)
+  const popupContent = useMemo(
+    () => `${vehicleTypeEstonian} ${vehicle.lineNum} → ${vehicle.destination} ${announcement}`,
+    [vehicleTypeEstonian, vehicle.lineNum, vehicle.destination, announcement]
+  );
 
-  // Check if this vehicle should be hidden based on route selection
-  const isHidden = selectedRoute.line && selectedRoute.line !== vehicle.lineNum;
+  // Check if this vehicle should be hidden based on route selection (memoized)
+  const isHidden = useMemo(
+    () => selectedRoute.line && selectedRoute.line !== vehicle.lineNum,
+    [selectedRoute.line, vehicle.lineNum]
+  );
 
   return (
     <Marker

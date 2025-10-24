@@ -3,6 +3,7 @@
  * Handles fetching, animation timing, and rendering
  */
 
+import { useMemo } from 'react';
 import { useVehicles } from '../hooks/useVehicles';
 import { useInterruptions } from '../hooks/useInterruptions';
 import { VehicleMarker } from './VehicleMarker';
@@ -14,9 +15,11 @@ export function VehiclesLayer() {
   const lastUpdate = useMapStore((state) => state.lastUpdate);
 
   // Determine if we should animate markers
-  // Always animate once we have initial data, but skip animation
-  // if user returns after being away (> 15 seconds gap)
-  const shouldAnimate = lastUpdate === 0 ? false : Date.now() - lastUpdate < 15000;
+  // Memoize to prevent recalculation on every render
+  const shouldAnimate = useMemo(() => {
+    if (lastUpdate === 0) return false;
+    return Date.now() - lastUpdate < 15000;
+  }, [lastUpdate]);
 
   if (error) {
     console.error('Error loading vehicles:', error);

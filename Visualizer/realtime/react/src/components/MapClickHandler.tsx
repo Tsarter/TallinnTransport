@@ -26,7 +26,6 @@ export function MapClickHandler() {
 
       // Reset route selection after 2 clicks on the map
       if (clickCountRef.current >= 2) {
-        console.log('Deselecting route after 2 map clicks');
         clickCountRef.current = 0;
         setSelectedRoute({ type: null, line: null, destination: null });
         setSelectedStop(null);

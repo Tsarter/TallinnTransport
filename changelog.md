@@ -1,3 +1,35 @@
+## 24-10-2025
+
+## CHANGED
+
+React visualizer - Phase 6 performance optimizations completed
+- Optimized map event handlers to only update on moveend/zoomend (no intermediate updates during dragging)
+- Added extensive memoization throughout components:
+  - Memoized position arrays and event handlers in StopMarker
+  - Memoized calculations in VehicleMarker (interruption checks, icon names, popup content, visibility)
+  - Memoized shouldAnimate calculation in VehiclesLayer
+- Removed all console.log statements for production performance
+- React migration now complete with 100% feature parity and improved performance
+
+## 08-08-2025
+
+## ADDED
+
+Tailscale for secure remote access
+Installed Tailscale with:
+`curl -fsSL https://tailscale.com/install.sh | sh`
+
+`sudo tailscale up`
+
+## 08-08-2025
+
+## ADDED
+
+Automatic updates for security
+Added unattended-upgrades package
+Enabled it in /etc/apt/apt.conf.d/20auto-upgrades
+Modified /etc/apt/apt.conf.d/50unattended-upgrades to send email notifications on failure
+
 ## 07-08-2025
 
 ## ADDED

@@ -19,7 +19,6 @@ export function useRoute() {
         return null;
       }
 
-      console.log('Fetching route:', selectedRoute);
       const coords = await fetchRouteData(
         selectedRoute.type,
         selectedRoute.line,

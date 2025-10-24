@@ -21,11 +21,9 @@ export function useVehicles() {
     queryFn: async () => {
       // Skip if document is hidden (handled by React Query automatically)
       if (document.hidden) {
-        console.log('Window is not active, skipping data fetch.');
         return null;
       }
 
-      console.log('Fetching vehicles:', new Date().toLocaleTimeString());
       const csvData = await fetchGPSData();
       const parsedVehicles = parseGPSData(csvData);
 
@@ -46,7 +44,6 @@ export function useVehicles() {
   useEffect(() => {
     if (vehicles) {
       const timestamp = Date.now();
-      console.log(`Updating vehicles in store: ${Object.keys(vehicles).length} vehicles at ${new Date(timestamp).toLocaleTimeString()}`);
       setVehicles(vehicles);
       setLastUpdate(timestamp);
     }

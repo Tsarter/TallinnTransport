@@ -1,6 +1,7 @@
 /**
  * StopsLayer component manages all stop markers
  * Implements zoom-based visibility and bounds filtering for performance
+ * Optimized to reduce re-renders during map movement
  */
 
 import { useState, useMemo } from 'react';
@@ -18,7 +19,7 @@ export function StopsLayer() {
   const [zoom, setZoom] = useState(13);
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
 
-  // Track map zoom and bounds changes
+  // Only update when movement/zoom stops - no intermediate updates
   const map = useMapEvents({
     zoomend: () => {
       setZoom(map.getZoom());

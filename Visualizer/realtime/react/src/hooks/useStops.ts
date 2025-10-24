@@ -16,7 +16,6 @@ export function useStops() {
   const { data: stopsArray, error, isLoading } = useQuery({
     queryKey: ['stops'],
     queryFn: async () => {
-      console.log('Fetching stops...');
       const stops = await fetchStops();
       return stops as Stop[];
     },
@@ -32,7 +31,6 @@ export function useStops() {
       stopsArray.forEach((stop) => {
         stopsMap[stop.stop_id] = stop;
       });
-      console.log(`Loaded ${stopsArray.length} stops`);
       setStops(stopsMap);
     }
   }, [stopsArray, setStops]);
