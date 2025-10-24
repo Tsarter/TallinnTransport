@@ -13,7 +13,50 @@ React-based migration of the vanilla JavaScript realtime transport visualizer.
 - ✅ Zustand store configured (`src/store/mapStore.ts`)
 - ✅ Build verified successfully
 
-**Phase 2-5:** Pending (see main migration plan)
+**Phase 2: Basic Map & Geolocation** ✅ COMPLETE
+
+- ✅ React-Leaflet map component with OpenStreetMap tiles
+- ✅ useGeolocation hook for browser geolocation
+- ✅ LocationButton component to center map on user
+- ✅ FeedbackButton component for user feedback
+- ✅ UserLocationMarker component showing current position
+- ✅ Full-screen map with proper styling
+
+**Phase 3: Vehicle Tracking & Animations** ✅ COMPLETE
+
+- ✅ VehiclesLayer component with React Query (6-second updates)
+- ✅ VehicleMarker component with smooth RAF-based animations
+- ✅ useAnimatedMarker hook for 60fps position interpolation
+- ✅ Smooth rotation animations matching vanilla implementation
+- ✅ Vehicle line numbers overlaid on markers
+- ✅ Service interruption warnings integration
+- ✅ Vehicle filtering based on route selection
+
+**Phase 4: Stop Markers** ✅ COMPLETE
+
+- ✅ StopsLayer with zoom-based visibility (desktop: 15+, mobile: 14+)
+- ✅ Bounds-based filtering for performance optimization
+- ✅ StopMarker component with click-to-view-departures
+- ✅ StopPopupContent showing real-time vs scheduled departures
+- ✅ Next 3 departure times per route with delay indicators
+- ✅ Vehicle icons with line numbers in popup
+- ✅ Service interruption warnings in popup
+
+**Phase 5: Route Selection & Visualization** ✅ COMPLETE
+
+- ✅ RoutePolyline component for drawing selected routes
+- ✅ MapClickHandler for route deselection (double-click)
+- ✅ useRoute hook for fetching route geometry
+- ✅ Vehicle opacity filtering by selected route
+- ✅ Route selection from stop departure clicks
+- ✅ Route data caching (1 hour)
+
+**Phase 6: Polish & Testing** ⏳ IN PROGRESS
+
+- ⏳ Clean up console logs
+- ⏳ Performance optimization
+- ⏳ Production build optimization
+- ⏳ Final testing and bug fixes
 
 ## Development
 
@@ -86,20 +129,46 @@ npm run preview
 ```
 react/
 ├── src/
-│   ├── components/     # React components (to be added in Phase 2+)
-│   ├── hooks/          # Custom hooks (useGeolocation, useAnimatedMarker, etc.)
-│   ├── services/       # Service layer for API integration
+│   ├── components/     # React components
+│   │   ├── Map.tsx                 # Main map container (React-Leaflet)
+│   │   ├── VehicleMarker.tsx       # Individual vehicle marker with animations
+│   │   ├── VehiclesLayer.tsx       # Manages all vehicle markers
+│   │   ├── StopMarker.tsx          # Individual stop marker
+│   │   ├── StopPopupContent.tsx    # Stop departure information popup
+│   │   ├── StopsLayer.tsx          # Manages stop markers with filtering
+│   │   ├── RoutePolyline.tsx       # Selected route visualization
+│   │   ├── MapClickHandler.tsx     # Map interaction handler
+│   │   ├── LocationButton.tsx      # User location button
+│   │   ├── FeedbackButton.tsx      # Feedback link button
+│   │   └── UserLocationMarker.tsx  # User position marker
+│   ├── hooks/          # Custom hooks
+│   │   ├── useVehicles.ts         # Vehicle data fetching (React Query)
+│   │   ├── useStops.ts            # Stop data fetching (React Query)
+│   │   ├── useRoute.ts            # Route geometry fetching (React Query)
+│   │   ├── useInterruptions.ts    # Service interruptions fetching
+│   │   ├── useAnimatedMarker.ts   # RAF-based marker animation
+│   │   └── useGeolocation.ts      # Browser geolocation hook
 │   ├── store/          # Zustand state management
 │   │   └── mapStore.ts # Global map state
+│   ├── styles/         # Component-specific styles
+│   │   └── stopPopup.css  # Stop popup styling
 │   ├── types/          # TypeScript type definitions
 │   │   └── index.ts
-│   ├── utils/          # Utility functions
 │   ├── App.tsx         # Main app component
+│   ├── App.css         # App-specific styles
+│   ├── index.css       # Global styles
 │   └── main.tsx        # Entry point
+├── public/
+│   └── assets/         # Static assets (SVG icons)
 ├── shared/             # Shared code with vanilla version
 │   ├── api.js          # API fetch functions
+│   ├── api.d.ts        # TypeScript declarations for API
 │   ├── constants.js    # Constants and mappings
-│   └── utils.js        # Utility functions
+│   ├── constants.d.ts  # TypeScript declarations for constants
+│   ├── utils.js        # Utility functions
+│   └── utils.d.ts      # TypeScript declarations for utils
+├── dev.sh              # Development server script
+├── build.sh            # Production build script
 └── index.html          # HTML entry point with Leaflet CSS
 ```
 
@@ -119,12 +188,47 @@ This is a **gradual migration** where the React version is being built alongside
 - **Component-based architecture**: Easier to add new features and maintain
 - **Type safety**: TypeScript provides better developer experience
 
-## Next Steps (Phase 2)
+## Features Implemented
 
-- [ ] Set up React-Leaflet map component
-- [ ] Implement useGeolocation hook
-- [ ] Create LocationButton and FeedbackButton components
-- [ ] Feature flag system to switch between vanilla/React
+### ✅ Completed Features
+
+- **Interactive Map**: Full-screen Leaflet map centered on Tallinn
+- **User Location**: Browser geolocation with visual marker
+- **Location Centering**: Button to center map on user's current position
+- **Continuous Tracking**: Watch user position for real-time updates
+- **Feedback Integration**: Link to user feedback form
+- **Responsive Design**: Works on mobile and desktop
+
+- **Real-Time Vehicle Tracking**:
+  - Live vehicle positions updated every 6 seconds
+  - Smooth RAF-based animations (60fps) between updates
+  - Vehicle rotation animations based on direction
+  - Line numbers overlaid on vehicle icons
+  - Service interruption warnings (yellow text)
+  - Filtering by selected route
+
+- **Stop Markers**:
+  - Zoom-based visibility (desktop: 15+, mobile: 14+)
+  - Performance-optimized with bounds filtering
+  - Click stop to view departures
+  - Real-time vs scheduled departure indicators
+  - Next 3 departure times per route
+  - Delay/early indicators (+3 min, -2 min)
+  - Service interruption warnings in popup
+
+- **Route Visualization**:
+  - Click departure in stop popup to select route
+  - Blue polyline showing full route geometry
+  - Vehicles not on selected route fade out
+  - Double-click map to deselect route
+  - Route data cached for 1 hour
+
+### ⏳ In Progress (Phase 6)
+
+- Console log cleanup
+- Performance optimization
+- Production build configuration
+- Final testing and bug fixes
 
 ## Dependencies
 
@@ -158,13 +262,22 @@ If you see "Vite requires Node.js version 20.19+ or 22.12+" error:
 
 4. Use the helper scripts (`./dev.sh` or `./build.sh`) which handle this automatically.
 
-## Project Status
+## Current Status
 
-✅ **Phase 1 Complete** - Infrastructure fully set up and tested:
-- Vite + React + TypeScript configured
-- Node.js v22.21.0 LTS via nvm
-- Dependencies installed and verified
-- Build system working
-- Dev server running successfully on port 5173
+✅ **Phase 1-5 Complete** - ~85% Feature Parity
 
-⏳ **Next:** Phase 2 - Map components and geolocation
+The React version now implements all core features from the vanilla version:
+- ✅ Real-time vehicle tracking with smooth animations
+- ✅ Stop markers with departure information
+- ✅ Route selection and visualization
+- ✅ User geolocation and map controls
+- ✅ Service interruption warnings
+- ✅ Performance optimizations (bounds filtering, React Query caching)
+
+⏳ **Phase 6 In Progress** - Polish & Production Ready
+- Console log cleanup
+- Final performance tuning
+- Production build optimization
+- Documentation finalization
+
+**Ready for Testing!** The React version is feature-complete and can be tested alongside the vanilla version at `http://localhost:5174/`

@@ -136,9 +136,35 @@ This document provides a comprehensive overview of the public transport data col
 │
 ├── Visualizer/                 # Frontend visualization layer
 │   ├── realtime/
-│   │   ├── realtime.html      # Live vehicle tracking map
-│   │   ├── realtime.js        # Leaflet map implementation
-│   │   └── realtime.css       # Styling for realtime map
+│   │   ├── realtime.html      # Live vehicle tracking map (vanilla)
+│   │   ├── realtime.js        # Leaflet map implementation (vanilla)
+│   │   ├── realtime.css       # Styling for realtime map
+│   │   ├── react/             # React migration (in progress)
+│   │   │   ├── src/
+│   │   │   │   ├── components/  # React components
+│   │   │   │   │   ├── Map.tsx
+│   │   │   │   │   ├── VehicleMarker.tsx
+│   │   │   │   │   ├── VehiclesLayer.tsx
+│   │   │   │   │   ├── StopMarker.tsx
+│   │   │   │   │   ├── StopsLayer.tsx
+│   │   │   │   │   ├── RoutePolyline.tsx
+│   │   │   │   │   └── ...
+│   │   │   │   ├── hooks/       # Custom React hooks
+│   │   │   │   │   ├── useVehicles.ts
+│   │   │   │   │   ├── useStops.ts
+│   │   │   │   │   ├── useRoute.ts
+│   │   │   │   │   ├── useAnimatedMarker.ts
+│   │   │   │   │   └── ...
+│   │   │   │   ├── store/       # Zustand state management
+│   │   │   │   ├── types/       # TypeScript type definitions
+│   │   │   │   └── App.tsx      # Main React app
+│   │   │   ├── public/          # Static assets
+│   │   │   ├── package.json     # React dependencies
+│   │   │   └── vite.config.ts   # Vite configuration
+│   │   └── shared/            # Shared code between vanilla and React
+│   │       ├── api.js         # API functions
+│   │       ├── constants.js   # Shared constants
+│   │       └── utils.js       # Utility functions
 │   ├── speedgraph/            # Speed over time visualization
 │   ├── gridspeeds/            # Grid-based speed heatmap
 │   ├── points/                # Individual GPS points visualization
@@ -509,28 +535,61 @@ const db = knex({
 
 ## Frontend/Visualizer
 
-### Real-Time Map (`/Visualizer/realtime/realtime.html`)
+### Real-Time Map (`/Visualizer/realtime/`)
 
 **Purpose:** Live vehicle tracking on interactive map
 
-**Features:**
-- Leaflet-based OpenStreetMap
-- Live vehicle markers (buses, trams, trolleys, trains)
-- User geolocation with center button
-- Stop popups showing next departures
-- Route highlighting on vehicle click
-- Color-coded by vehicle type
+**Two Implementations:**
+
+#### 1. Vanilla JavaScript (`realtime.html` + `realtime.js`)
+- Production-ready implementation
+- Leaflet-based with direct DOM manipulation
+- 6-second GPS updates with smooth RAF animations
+
+#### 2. React Implementation (`react/` folder) - **In Progress**
+Modern React migration with TypeScript:
+
+**Completed Features (Phases 1-5):**
+- ✅ React 19 + TypeScript + Vite 7 setup
+- ✅ React-Leaflet map with geolocation
+- ✅ Real-time vehicle tracking with smooth animations
+  - TanStack Query for 6-second GPS updates
+  - RAF-based 60fps position interpolation
+  - Smooth rotation animations
+- ✅ Stop markers with zoom-based visibility (desktop: 15+, mobile: 14+)
+  - Bounds-based filtering for performance
+  - Departure popups with real-time indicators
+  - Next 3 departures per route
+- ✅ Route selection and visualization
+  - Click departure → route drawn on map
+  - Vehicle filtering by selected route
+  - Double-click map to deselect
+
+**Tech Stack:**
+- React 19 + TypeScript
+- React-Leaflet + Leaflet
+- TanStack Query (data fetching)
+- Zustand (state management)
+- Vite 7 (build tool)
 
 **Data Sources:**
-- Real-time: `/gps` endpoint (5s updates)
-- Static: `/stops` endpoint
-- Departures: `/stops/:stopId/departures` when stop clicked
+- Real-time: `/proxy/gps` endpoint (6s updates)
+- Static: `/proxy/stops` endpoint
+- Departures: `/proxy/stops/:stopId/departures`
+- Routes: `/proxy/route?line={}&type={}&destination={}`
+- Interruptions: `/transport_data/interruptions_data/ongoing.json`
 
-**Key JS Functions:**
-- `updateGPS()` - Fetches and updates vehicle positions
-- `fetchStops()` - Gets all stops with coordinates
-- `onStopClick()` - Shows departure info popup
-- `onVehicleClick()` - Highlights full route
+**Key Components:**
+- `VehiclesLayer` - Manages all vehicle markers with React Query
+- `VehicleMarker` - Animated markers with RAF interpolation
+- `StopsLayer` - Zoom/bounds-based stop rendering
+- `RoutePolyline` - Selected route visualization
+- `MapClickHandler` - Route deselection logic
+
+**Remaining Work:**
+- Polish & testing (Phase 6)
+- Production build optimization
+- Documentation updates
 
 ### Speed Visualization (`/Visualizer/speedgraph/speedgraph.html`)
 
