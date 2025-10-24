@@ -1,5 +1,12 @@
 ## 24-10-2025
 
+## ADDED
+
+React visualizer - Vehicle marker click to show route
+- Added click handler to vehicle markers to display their route
+- Matches vanilla JavaScript behavior where clicking a vehicle shows its route polyline
+- Uses existing route visualization infrastructure
+
 ## CHANGED
 
 React visualizer - Phase 6 performance optimizations completed

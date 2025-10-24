@@ -219,6 +219,7 @@ This is a **gradual migration** where the React version is being built alongside
 
 - **Route Visualization**:
   - Click departure in stop popup to select route
+  - Click vehicle marker to show its route
   - Blue polyline showing full route geometry
   - Vehicles not on selected route fade out
   - Double-click map to deselect route

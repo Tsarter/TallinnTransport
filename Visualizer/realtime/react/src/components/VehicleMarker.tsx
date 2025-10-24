@@ -7,7 +7,7 @@
 import { Marker, Popup } from 'react-leaflet';
 import { DivIcon } from 'leaflet';
 import type { Marker as LeafletMarker } from 'leaflet';
-import { useMemo, memo, useRef, useEffect } from 'react';
+import { useMemo, memo, useRef, useEffect, useCallback } from 'react';
 import { useMapStore } from '../store/mapStore';
 import type { Vehicle } from '../types';
 import { VEHICLE_TYPES_ESTONIAN } from '../../../shared/constants.js';
@@ -26,6 +26,7 @@ export const VehicleMarker = memo(function VehicleMarker({
 }: VehicleMarkerProps) {
   const interruptions = useMapStore((state) => state.interruptions);
   const selectedRoute = useMapStore((state) => state.selectedRoute);
+  const setSelectedRoute = useMapStore((state) => state.setSelectedRoute);
   const markerRef = useRef<LeafletMarker | null>(null);
   const animationRef = useRef<number | null>(null);
   // Store initial position to keep position prop stable
@@ -177,12 +178,30 @@ export const VehicleMarker = memo(function VehicleMarker({
     [selectedRoute.line, vehicle.lineNum]
   );
 
+  // Handle marker click to show route (matches vanilla behavior)
+  const handleMarkerClick = useCallback(() => {
+    setSelectedRoute({
+      type: vehicle.type,
+      line: vehicle.lineNum,
+      destination: vehicle.destination,
+    });
+  }, [vehicle.type, vehicle.lineNum, vehicle.destination, setSelectedRoute]);
+
+  // Memoize event handlers
+  const eventHandlers = useMemo(
+    () => ({
+      click: handleMarkerClick,
+    }),
+    [handleMarkerClick]
+  );
+
   return (
     <Marker
       position={initialPositionRef.current}
       icon={icon}
       opacity={isHidden ? 0 : 1}
       ref={markerRef}
+      eventHandlers={eventHandlers}
     >
       <Popup autoPan={false}>{popupContent}</Popup>
     </Marker>
