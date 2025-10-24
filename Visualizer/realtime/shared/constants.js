@@ -58,7 +58,11 @@ export const DEVICE_TYPE = {
   DESKTOP: 'Desktop',
 };
 
-// API endpoints base paths
+// API base URL and endpoints
+export const API_BASE = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE
+  ? import.meta.env.VITE_API_BASE
+  : 'https://tallinn.simplytobo.eu';
+
 export const API_PATHS = {
   PROXY: '/proxy',
   TRANSPORT_DATA: '/transport_data/transport_data',

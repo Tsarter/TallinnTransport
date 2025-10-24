@@ -3,12 +3,20 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Map } from './components/Map';
+import { LocationButton } from './components/LocationButton';
+import { FeedbackButton } from './components/FeedbackButton';
+import { UserLocationMarker } from './components/UserLocationMarker';
+import { VehiclesLayer } from './components/VehiclesLayer';
+import { StopsLayer } from './components/StopsLayer';
+import { RoutePolyline } from './components/RoutePolyline';
+import { MapClickHandler } from './components/MapClickHandler';
 import './App.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true, // Refetch when window regains focus
       staleTime: 5000,
     },
   },
@@ -18,16 +26,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app">
-        <h1>Tallinn Live Transport (React)</h1>
-        <p>React version is being built... Phase 1 infrastructure is complete!</p>
-        <ul>
-          <li>✅ Vite + React + TypeScript setup</li>
-          <li>✅ Dependencies installed (React-Leaflet, Zustand, React Query)</li>
-          <li>✅ Shared API module created</li>
-          <li>✅ TypeScript types defined</li>
-          <li>✅ Zustand store configured</li>
-          <li>⏳ Next: Implementing map components...</li>
-        </ul>
+        <Map>
+          <VehiclesLayer />
+          <StopsLayer />
+          <RoutePolyline />
+          <UserLocationMarker />
+          <MapClickHandler />
+          <LocationButton />
+        </Map>
+        <FeedbackButton />
       </div>
     </QueryClientProvider>
   );

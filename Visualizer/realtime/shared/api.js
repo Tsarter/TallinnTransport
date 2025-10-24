@@ -3,12 +3,14 @@
  * Contains all data fetching functions for the realtime transport visualizer
  */
 
+import { API_BASE } from './constants.js';
+
 /**
  * Fetch all stops from the API
  * @returns {Promise<Array>} Array of stop objects with {stop_id, stop_name, lat, lon}
  */
 export async function fetchStops() {
-  const response = await fetch('/proxy/stops');
+  const response = await fetch(`${API_BASE}/proxy/stops`);
   if (!response.ok) {
     throw new Error(`Failed to fetch stops: ${response.statusText}`);
   }
@@ -22,7 +24,7 @@ export async function fetchStops() {
  * @returns {Promise<Array>} Array of departure objects
  */
 export async function fetchStopDepartures(stopId, limit = 10) {
-  const response = await fetch(`/proxy/stops/${stopId}/departures?limit=${limit}`);
+  const response = await fetch(`${API_BASE}/proxy/stops/${stopId}/departures?limit=${limit}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch stop departures: ${response.statusText}`);
   }
@@ -36,7 +38,7 @@ export async function fetchStopDepartures(stopId, limit = 10) {
  * @returns {Promise<Array>} Array of real-time departure objects
  */
 export async function fetchRealtimeStopDepartures(stopId, limit = 10) {
-  const response = await fetch(`/proxy/stops/${stopId}/departures/realtime?limit=${limit}`);
+  const response = await fetch(`${API_BASE}/proxy/stops/${stopId}/departures/realtime?limit=${limit}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch realtime stop departures: ${response.statusText}`);
   }
@@ -49,7 +51,7 @@ export async function fetchRealtimeStopDepartures(stopId, limit = 10) {
  * @returns {Promise<string>} CSV string of vehicle positions
  */
 export async function fetchGPSData() {
-  const response = await fetch('/proxy/gps');
+  const response = await fetch(`${API_BASE}/proxy/gps`);
   if (!response.ok) {
     throw new Error(`Failed to fetch GPS data: ${response.statusText}`);
   }
@@ -65,7 +67,7 @@ export async function fetchGPSData() {
  */
 export async function fetchRouteData(vehicleType, lineNumber, destination) {
   const response = await fetch(
-    `/proxy/route?line=${lineNumber}&type=${vehicleType}&destination=${destination}`
+    `${API_BASE}/proxy/route?line=${lineNumber}&type=${vehicleType}&destination=${destination}`
   );
   if (!response.ok) {
     throw new Error(`Failed to fetch route data: ${response.statusText}`);
