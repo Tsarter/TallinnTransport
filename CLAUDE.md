@@ -135,36 +135,13 @@ This document provides a comprehensive overview of the public transport data col
 │       └── tsconfig.json
 │
 ├── Visualizer/                 # Frontend visualization layer
+│   ├── dist/                  # React production build output
+│   │   ├── index.html         # Production HTML entry point
+│   │   └── assets/            # Compiled JS/CSS bundles and SVG icons
 │   ├── realtime/
 │   │   ├── realtime.html      # Live vehicle tracking map (vanilla)
 │   │   ├── realtime.js        # Leaflet map implementation (vanilla)
-│   │   ├── realtime.css       # Styling for realtime map
-│   │   ├── react/             # React migration (in progress)
-│   │   │   ├── src/
-│   │   │   │   ├── components/  # React components
-│   │   │   │   │   ├── Map.tsx
-│   │   │   │   │   ├── VehicleMarker.tsx
-│   │   │   │   │   ├── VehiclesLayer.tsx
-│   │   │   │   │   ├── StopMarker.tsx
-│   │   │   │   │   ├── StopsLayer.tsx
-│   │   │   │   │   ├── RoutePolyline.tsx
-│   │   │   │   │   └── ...
-│   │   │   │   ├── hooks/       # Custom React hooks
-│   │   │   │   │   ├── useVehicles.ts
-│   │   │   │   │   ├── useStops.ts
-│   │   │   │   │   ├── useRoute.ts
-│   │   │   │   │   ├── useAnimatedMarker.ts
-│   │   │   │   │   └── ...
-│   │   │   │   ├── store/       # Zustand state management
-│   │   │   │   ├── types/       # TypeScript type definitions
-│   │   │   │   └── App.tsx      # Main React app
-│   │   │   ├── public/          # Static assets
-│   │   │   ├── package.json     # React dependencies
-│   │   │   └── vite.config.ts   # Vite configuration
-│   │   └── shared/            # Shared code between vanilla and React
-│   │       ├── api.js         # API functions
-│   │       ├── constants.js   # Shared constants
-│   │       └── utils.js       # Utility functions
+│   │   └── realtime.css       # Styling for realtime map
 │   ├── speedgraph/            # Speed over time visualization
 │   ├── gridspeeds/            # Grid-based speed heatmap
 │   ├── points/                # Individual GPS points visualization
@@ -176,7 +153,44 @@ This document provides a comprehensive overview of the public transport data col
 │   ├── index.html             # Main entry page
 │   └── assets/                # Icons and media
 │
-└── README.md                   # Project overview
+├── react/                     # React realtime visualizer (top-level)
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   │   ├── Map.tsx
+│   │   │   ├── VehicleMarker.tsx
+│   │   │   ├── VehiclesLayer.tsx
+│   │   │   ├── StopMarker.tsx
+│   │   │   ├── StopsLayer.tsx
+│   │   │   ├── RoutePolyline.tsx
+│   │   │   └── ...
+│   │   ├── hooks/             # Custom React hooks
+│   │   │   ├── useVehicles.ts
+│   │   │   ├── useStops.ts
+│   │   │   ├── useRoute.ts
+│   │   │   ├── useRouteStops.ts
+│   │   │   ├── useAnimatedMarker.ts
+│   │   │   └── useGeolocation.ts
+│   │   ├── store/             # Zustand state management
+│   │   │   └── mapStore.ts
+│   │   ├── types/             # TypeScript type definitions
+│   │   ├── styles/            # Component styles
+│   │   └── App.tsx            # Main React app
+│   ├── public/                # Static assets
+│   │   └── assets/            # SVG vehicle icons
+│   ├── package.json           # React dependencies
+│   ├── vite.config.ts         # Vite configuration
+│   ├── dev.sh                 # Development server script
+│   └── build.sh               # Production build script
+│
+├── shared/                    # Shared code between vanilla and React
+│   ├── api.js                 # API functions
+│   ├── api.d.ts               # TypeScript declarations
+│   ├── constants.js           # Shared constants
+│   ├── constants.d.ts         # TypeScript declarations
+│   ├── utils.js               # Utility functions
+│   └── utils.d.ts             # TypeScript declarations
+│
+└── README.md                  # Project overview
 ```
 
 ---
@@ -546,10 +560,10 @@ const db = knex({
 - Leaflet-based with direct DOM manipulation
 - 6-second GPS updates with smooth RAF animations
 
-#### 2. React Implementation (`react/` folder) - **In Progress**
-Modern React migration with TypeScript:
+#### 2. React Implementation (`/react/` folder) - **✅ COMPLETE**
+Modern React migration with TypeScript - full feature parity with vanilla version:
 
-**Completed Features (Phases 1-5):**
+**Completed Features (All Phases 1-6):**
 - ✅ React 19 + TypeScript + Vite 7 setup
 - ✅ React-Leaflet map with geolocation
 - ✅ Real-time vehicle tracking with smooth animations
@@ -562,8 +576,16 @@ Modern React migration with TypeScript:
   - Next 3 departures per route
 - ✅ Route selection and visualization
   - Click departure → route drawn on map
+  - Click vehicle → show its route
   - Vehicle filtering by selected route
+  - Hidden vehicles don't show popups
   - Double-click map to deselect
+- ✅ Performance optimizations
+  - Memoized components and calculations
+  - Map event debouncing
+  - Console logs removed for production
+- ✅ Production build ready
+  - Output to `/Visualizer/dist/` for deployment
 
 **Tech Stack:**
 - React 19 + TypeScript
@@ -581,15 +603,16 @@ Modern React migration with TypeScript:
 
 **Key Components:**
 - `VehiclesLayer` - Manages all vehicle markers with React Query
-- `VehicleMarker` - Animated markers with RAF interpolation
+- `VehicleMarker` - Animated markers with RAF interpolation, conditional popup rendering
 - `StopsLayer` - Zoom/bounds-based stop rendering
 - `RoutePolyline` - Selected route visualization
 - `MapClickHandler` - Route deselection logic
+- `useRouteStops` - Route-specific stop data fetching
 
-**Remaining Work:**
-- Polish & testing (Phase 6)
-- Production build optimization
-- Documentation updates
+**Development:**
+- Dev server: `cd react && npm run dev` (http://localhost:5173)
+- Production build: `cd react && npm run build` (outputs to Visualizer/dist/)
+- See `react/README.md` for detailed documentation
 
 ### Speed Visualization (`/Visualizer/speedgraph/speedgraph.html`)
 

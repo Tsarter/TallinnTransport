@@ -209,7 +209,7 @@ export const VehicleMarker = memo(function VehicleMarker({
       eventHandlers={eventHandlers}
       interactive={!isHidden}
     >
-      <Popup autoPan={false}>{popupContent}</Popup>
+      {!isHidden && <Popup autoPan={false}>{popupContent}</Popup>}
     </Marker>
   );
 });

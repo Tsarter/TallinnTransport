@@ -58,6 +58,7 @@ React-based migration of the vanilla JavaScript realtime transport visualizer.
 - ✅ Marker component optimization (memoized calculations)
 - ✅ Production build optimization
 - ✅ Testing and validation
+- ✅ Bug fixes: Hidden vehicles no longer show popups when clicked
 
 ## Development
 
@@ -221,16 +222,21 @@ This is a **gradual migration** where the React version is being built alongside
   - Click departure in stop popup to select route
   - Click vehicle marker to show its route
   - Blue polyline showing full route geometry
-  - Vehicles not on selected route fade out
+  - Vehicles not on selected route fade out (opacity: 0)
+  - Hidden vehicles don't show popups when clicked
   - Double-click map to deselect route
   - Route data cached for 1 hour
 
-### ⏳ In Progress (Phase 6)
+### ✅ All Features Complete
 
-- Console log cleanup
-- Performance optimization
-- Production build configuration
-- Final testing and bug fixes
+All phases (1-6) have been completed successfully. The React version has full feature parity with the vanilla version plus additional improvements:
+
+- Complete vehicle tracking with smooth animations
+- Full stop marker integration with departures
+- Route selection and visualization
+- Performance optimizations (memoization, debouncing)
+- Production build ready
+- Bug fixes applied (hidden vehicle popups fixed)
 
 ## Dependencies
 
