@@ -4,7 +4,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, startTransition } from 'react';
+import { useEffect, startTransition, useRef } from 'react';
 import { useMapStore } from '../store/mapStore';
 import { fetchGPSData, parseGPSData } from '../../../shared/api.js';
 import type { Vehicle } from '../types';
@@ -14,6 +14,7 @@ const UPDATE_INTERVAL = 6000; // 6 seconds
 export function useVehicles() {
   const setVehicles = useMapStore((state) => state.setVehicles);
   const setLastUpdate = useMapStore((state) => state.setLastUpdate);
+  const lastVisibleTimeRef = useRef<number>(Date.now());
 
   // Use React Query for data fetching with automatic refetching
   const { data: vehicles, error, isLoading } = useQuery({
@@ -54,11 +55,32 @@ export function useVehicles() {
     staleTime: UPDATE_INTERVAL - 1000,
   });
 
+  // Track when page becomes visible/hidden to control animations
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible - update the last visible time
+        lastVisibleTimeRef.current = Date.now();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Update Zustand store when vehicles change
   // Use startTransition to mark as non-urgent, keeping UI responsive
   useEffect(() => {
     if (vehicles) {
-      const timestamp = Date.now();
+      const now = Date.now();
+      const timeSinceVisible = now - lastVisibleTimeRef.current;
+
+      // If user was away for 15+ seconds, set lastUpdate to 0 to disable animations
+      // Otherwise, set it to current time to enable animations
+      const timestamp = timeSinceVisible > 15000 ? 0 : now;
 
       // Mark vehicle updates as low priority
       startTransition(() => {
