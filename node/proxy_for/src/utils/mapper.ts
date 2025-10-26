@@ -74,3 +74,44 @@ export function mapTallinnVehiclePositionsResponseToJson(text : string, destinat
   }
   return tltMapped;
 }
+
+/**
+ * Convert Elron train data to TLT CSV format
+ * TLT CSV format: type,lineNum,lon,lat,,direction,vehicleId,,tripId,destination
+ * @param trains - Array of Elron train objects
+ * @returns CSV string in TLT format
+ */
+export function mapElronTrainsToCsv(trains: any[]): string {
+  return trains
+    .map((train) => {
+      // Convert lat/lon to integer format (multiply by 1,000,000)
+      const lat = Math.round(parseFloat(train.latitude) * 1e6);
+      const lon = Math.round(parseFloat(train.longitude) * 1e6);
+
+      // Type 10 = train
+      const type = '10';
+
+      // Use trip number as line number (reis field)
+      const lineNum = train.reis;
+
+      // Direction from rongi_suund field
+      const direction = train.rongi_suund;
+
+      // Use reis as vehicle ID (unique trip identifier)
+      const vehicleId = train.reis;
+
+      // Use reis as trip ID
+      const tripId = train.reis;
+
+      // Extract destination from liin field (e.g., "Tallinn - Aegviidu" -> "Aegviidu")
+      let destination = train.liin;
+      if (destination.includes(' - ')) {
+        const parts = destination.split(' - ');
+        destination = parts[parts.length - 1]; // Take the last part as destination
+      }
+
+      // TLT format: type,lineNum,lon,lat,,direction,vehicleId,,tripId,destination
+      return `${type},${lineNum},${lon},${lat},,${direction},${vehicleId},,${tripId},${destination}`;
+    })
+    .join('\n');
+}

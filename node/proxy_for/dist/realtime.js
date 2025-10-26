@@ -10,7 +10,7 @@ apicache.options({ headers: { "Cache-Control": "public, max-age=10" } }); // Set
 let cache = apicache.middleware;
 import { getRouteCoordinatesFromDB } from "./utils/routeUtils.js";
 import { getStopsFromDB, getNextDeparturesByStopId, getStopsByRoute, } from "./utils/stopsUtils.js";
-import { mapTallinnLiveDeparturesResponseToJson } from "./utils/mapper.js";
+import { mapTallinnLiveDeparturesResponseToJson, mapElronTrainsToCsv } from "./utils/mapper.js";
 import { error } from "console";
 apicache.clear();
 const app = express();
@@ -50,17 +50,22 @@ app.get("/gps", cache("5 seconds"), async (req, res) => {
                 .status(tltResponse?.status || 500)
                 .send("Error fetching GPS data for both TLT and Elron");
         }
-        let data = {
-            buses: [],
-            trams: [],
-            trolleys: [],
-            trains: [],
-            longDistanceBuses: [],
-            errorMsg,
-        };
-        let tltData = tltResponse ? await tltResponse.text() : "";
-        let elronData = elronResponse ? await elronResponse.json() : "";
-        res.send(tltData);
+        // Fetch TLT data (buses, trams, trolleys)
+        let tltData = tltResponse?.ok ? await tltResponse.text() : "";
+        // Fetch Elron data (trains) and convert to CSV format
+        let elronCsv = "";
+        if (elronResponse?.ok) {
+            const elronJson = await elronResponse.json();
+            if (elronJson.status === 1 && elronJson.data && elronJson.data.length > 0) {
+                elronCsv = mapElronTrainsToCsv(elronJson.data);
+            }
+        }
+        // Combine TLT and Elron data
+        let combinedData = tltData;
+        if (elronCsv) {
+            combinedData = tltData ? `${tltData}\n${elronCsv}` : elronCsv;
+        }
+        res.send(combinedData);
     }
     catch (error) {
         console.error(`Error fetching GPS data:`, error);

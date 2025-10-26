@@ -16,7 +16,8 @@ import {
   getNextDeparturesByStopId,
   getStopsByRoute,
 } from "./utils/stopsUtils.js";
-import { mapTallinnLiveDeparturesResponseToJson } from "./utils/mapper.js";
+import { mapTallinnLiveDeparturesResponseToJson, mapElronTrainsToCsv } from "./utils/mapper.js";
+import type { ElronApiResponse } from "./utils/types.js";
 import { error } from "console";
 
 apicache.clear();
@@ -61,19 +62,26 @@ app.get(
           .status(tltResponse?.status || 500)
           .send("Error fetching GPS data for both TLT and Elron");
       }
-      let data = {
-        buses: [],
-        trams: [],
-        trolleys: [],
-        trains: [],
-        longDistanceBuses: [],
-        errorMsg,
-      };
 
-      let tltData = tltResponse ? await tltResponse.text() : "";
-      let elronData = elronResponse ? await elronResponse.json() : "";
+      // Fetch TLT data (buses, trams, trolleys)
+      let tltData = tltResponse?.ok ? await tltResponse.text() : "";
 
-      res.send(tltData);
+      // Fetch Elron data (trains) and convert to CSV format
+      let elronCsv = "";
+      if (elronResponse?.ok) {
+        const elronJson = await elronResponse.json() as ElronApiResponse;
+        if (elronJson.status === 1 && elronJson.data && elronJson.data.length > 0) {
+          elronCsv = mapElronTrainsToCsv(elronJson.data);
+        }
+      }
+
+      // Combine TLT and Elron data
+      let combinedData = tltData;
+      if (elronCsv) {
+        combinedData = tltData ? `${tltData}\n${elronCsv}` : elronCsv;
+      }
+
+      res.send(combinedData);
     } catch (error) {
       console.error(`Error fetching GPS data:`, error);
       res.status(500).send("Internal server error");
