@@ -102,28 +102,25 @@ const vehiclesEnglishToNum = {
   train: 10,
 };
 let lastUpdate = 0;
-function minutesUntilDeparture(hhmmss) {
+function minutesUntilTime(hhmmss, now = new Date()) {
   const [h, m, s] = hhmmss.split(":").map(Number);
 
-  const now = new Date();
   const departure = new Date(now);
 
   departure.setHours(h, m, s, 0);
 
   let diffMs = departure - now;
-
-  // If departure is "past midnight" (e.g. GTFS 24:xx:xx or tomorrow)
-  if (diffMs < 0) {
+  if (diffMs < -12 * 60 * 60 * 1000) {
     departure.setDate(departure.getDate() + 1);
     diffMs = departure - now;
   }
-
-  return Math.floor(diffMs / 60000); // minutes
+  console.log("diffMs", diffMs / 60000, Math.round(diffMs / 60000));
+  return Math.round(diffMs / 60000);
 }
 
-function formattedDepartureTime(hhmmss) {
+function formattedScheduledTime(scheduledTime, departureTime) {
   // Format departure time to show only hours and rounded minutes, no seconds
-  let [h, m, s] = hhmmss.split(":").map(Number);
+  let [h, m, s] = scheduledTime.split(":").map(Number);
   if (s >= 30) m += 1;
   if (m === 60) {
     m = 0;
@@ -132,17 +129,38 @@ function formattedDepartureTime(hhmmss) {
   const formattedTime = `${h.toString().padStart(2, "0")}:${m
     .toString()
     .padStart(2, "0")}`;
-  return formattedTime;
+  const [hours, minutes, seconds] = scheduledTime.split(":");
+  const scheduledTimeDate = new Date();
+  scheduledTimeDate.setHours(hours, minutes, seconds, 0);
+  console.log("departureTime", departureTime);
+  console.log("scheduledTimeDate", scheduledTimeDate);
+  const minTil = minutesUntilTime(departureTime, scheduledTimeDate);
+  let minutesSup = "";
+  if (minTil == "0") {
+    minutesSup = "";
+  } else if (minTil > 0) {
+    minutesSup = `<sup class="minutesSup">+${minTil}</sup>`;
+  } else if (minTil < 0) {
+    minutesSup = `<sup class="minutesSup">${minTil}</sup>`;
+  }
+  // Append minutes as superscript (like mathematical notation)
+  return `${formattedTime}${minutesSup}`;
 }
 
-function stopPopupRowCallback(type, lineNum, destination) {
+function stopPopupRowCallback(type, lineNum, destination, stop_id) {
   addRouteToMap(type, lineNum, destination);
   selectedRoute = { type, line: lineNum, destination };
+  stopMarkers[stop_id].closePopup();
 }
 async function createStopMarkerPopUp(stopData, stopMarker) {
   let popupContent = `<div class="stop-popup-header">${stopData.stop_name}</div>`;
   try {
-    const departures = await fetchStopDepartures(stopData.stop_id);
+    let departures = await fetchStopDepartures(stopData.stop_id);
+    departures = departures.sort(
+      (a, b) =>
+        minutesUntilTime(a.departure_time) - minutesUntilTime(b.departure_time)
+    );
+    console.log("Departures for stop", stopData.stop_id, departures);
 
     if (departures && Array.isArray(departures) && departures.length > 0) {
       const grouped = {};
@@ -154,8 +172,8 @@ async function createStopMarkerPopUp(stopData, stopMarker) {
       for (const [_, deps] of Object.entries(grouped)) {
         deps.sort(
           (a, b) =>
-            minutesUntilDeparture(a.departure_time) -
-            minutesUntilDeparture(b.departure_time)
+            minutesUntilTime(a.departure_time) -
+            minutesUntilTime(b.departure_time)
         );
         const top3 = deps.slice(0, 3);
         const first = top3[0];
@@ -170,37 +188,28 @@ async function createStopMarkerPopUp(stopData, stopMarker) {
           destination: first.trip_headsign,
           noLineBreaks: true,
         });
-        console.log(
-          "Ongoung interrupiton",
-          ongoingInterruption,
-          first.route_short_name,
-          first.route_id.split("_")[1],
-          vehiclesEnglishToNum[first.route_id.split("_")[1]],
-          first.trip_headsign
-        );
+
         const vehicleIconName = chooseVehicleIcon({
           iconType: vehicleTypeEstonian,
           ongoingInterruption,
         });
-        const earliestTil = minutesUntilDeparture(first.departure_time);
+        const earliestTil = minutesUntilTime(first.departure_time);
 
         // format all times for this route
         const timesHtml = top3
-          .map((d) => `${formattedDepartureTime(d.departure_time)}`)
+          .map(
+            (d) =>
+              `${formattedScheduledTime(d.scheduled_time, d.departure_time)}`
+          )
           .join(" ");
-        const isRealtime = first.scheduled_time !== first.departure_time;
-        console.log(
-          "isRealtime",
-          first.route_short_name,
-          isRealtime,
-          first.scheduled_time,
-          first.departure_time
-        );
-        const timeClass = isRealtime ? "realtime-time" : "scheduled-time";
+
+        const timeClass = first.is_realtime
+          ? "realtime-time"
+          : "scheduled-time";
         popupContent += `
             <div class="stop-popup-departure-row" onClick="stopPopupRowCallback('${vehcileTypeNum}', '${
           first.route_short_name
-        }', '${first.trip_headsign}')">
+        }', '${first.trip_headsign}', '${stopData.stop_id}')">
               <div class="bus-icon-wrapper">
                 <img src="../assets/${vehicleIconName}" class="bus-icon"/>
                 <span class="bus-icon-text">${first.route_short_name}</span>
@@ -323,7 +332,7 @@ function createStopMarker(stopData) {
     createStopMarkerPopUp(stopData, stopMarker);
   });
 
-  stopMarkers[stopData.stop_code] = stopMarker;
+  stopMarkers[stopData.stop_id] = stopMarker;
 }
 
 function createStopMarkers(stopsArray) {
@@ -345,9 +354,9 @@ function updateVisibleStopMarkers() {
       ((userDevice == "Desktop" && zoom >= 15) ||
         (userDevice == "Mobile" && zoom >= 14))
     ) {
-      stopMarkers[stop.stop_code].addTo(map);
-    } else if (map.hasLayer(stopMarkers[stop.stop_code])) {
-      map.removeLayer(stopMarkers[stop.stop_code]);
+      stopMarkers[stop.stop_id].addTo(map);
+    } else if (map.hasLayer(stopMarkers[stop.stop_id])) {
+      map.removeLayer(stopMarkers[stop.stop_id]);
     }
   });
 }
@@ -488,17 +497,17 @@ function fetchData() {
         });
 
         if (markers[key]) {
-          if (lastUpdate && Date.now() - lastUpdate > 15000) {
-            // Avoid animation after user returns to the page
-            markers[key].setLatLng([latNum, lonNum]);
-            textMarkers[key].setLatLng([latNum, lonNum]);
-            popups[key].setLatLng([latNum, lonNum]);
-          } else {
+          if (lastUpdate && Date.now() - lastUpdate < 15000) {
             const options = {
               key,
               announcement,
             };
             markerAnimation(options);
+          } else {
+            // Avoid animation after user returns to the page
+            markers[key].setLatLng([latNum, lonNum]);
+            textMarkers[key].setLatLng([latNum, lonNum]);
+            popups[key].setLatLng([latNum, lonNum]);
           }
         } else {
           const options = {

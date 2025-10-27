@@ -22,6 +22,16 @@ body, html, * {
     border: none;
 }
 
+#feedback-btn {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    z-index: 1000;
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
 .stop-icon {
   z-index: 1 !important;  /* set low stacking order */
 }
@@ -74,4 +84,9 @@ body, html, * {
 
 .scheduled-time {
     font-weight: bold;
+}
+
+.minutesSup{
+    font-size: 0.8em;
+    color: #515151;
 }
