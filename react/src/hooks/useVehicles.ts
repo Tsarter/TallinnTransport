@@ -14,7 +14,9 @@ const UPDATE_INTERVAL = 6000; // 6 seconds
 export function useVehicles() {
   const setVehicles = useMapStore((state) => state.setVehicles);
   const setLastUpdate = useMapStore((state) => state.setLastUpdate);
-  const lastVisibleTimeRef = useRef<number>(Date.now());
+  const setError = useMapStore((state) => state.setError);
+  const wasHiddenRef = useRef<boolean>(false);
+  const hiddenTimeRef = useRef<number>(0);
 
   // Use React Query for data fetching with automatic refetching
   const { data: vehicles, error, isLoading } = useQuery({
@@ -58,9 +60,15 @@ export function useVehicles() {
   // Track when page becomes visible/hidden to control animations
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Page became visible - update the last visible time
-        lastVisibleTimeRef.current = Date.now();
+      if (document.hidden) {
+        // Page became hidden - record the time
+        hiddenTimeRef.current = Date.now();
+      } else {
+        // Page became visible - mark that we were hidden
+        // (don't clear hiddenTimeRef yet - need it for calculation)
+        if (hiddenTimeRef.current > 0) {
+          wasHiddenRef.current = true;
+        }
       }
     };
 
@@ -76,11 +84,22 @@ export function useVehicles() {
   useEffect(() => {
     if (vehicles) {
       const now = Date.now();
-      const timeSinceVisible = now - lastVisibleTimeRef.current;
+      let timestamp = now;
 
-      // If user was away for 15+ seconds, set lastUpdate to 0 to disable animations
-      // Otherwise, set it to current time to enable animations
-      const timestamp = timeSinceVisible > 15000 ? 0 : now;
+      // Check if we just returned from being hidden
+      if (wasHiddenRef.current && hiddenTimeRef.current > 0) {
+        const timeHidden = now - hiddenTimeRef.current;
+
+        // If page was hidden for 15+ seconds, disable animations for this ONE update only
+        if (timeHidden > 15000) {
+          timestamp = 0;
+        }
+
+        // Clear the flag so next update will animate normally
+        wasHiddenRef.current = false;
+        hiddenTimeRef.current = 0;
+      }
+      // Otherwise, timestamp = now, which enables animations
 
       // Mark vehicle updates as low priority
       startTransition(() => {
@@ -89,6 +108,13 @@ export function useVehicles() {
       });
     }
   }, [vehicles, setVehicles, setLastUpdate]);
+
+  // Show error in snackbar when fetch fails
+  useEffect(() => {
+    if (error) {
+      setError(`Failed to fetch vehicle data: ${(error as Error).message}`);
+    }
+  }, [error, setError]);
 
   return {
     vehicles: vehicles || {},

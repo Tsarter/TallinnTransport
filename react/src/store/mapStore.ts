@@ -43,6 +43,11 @@ interface MapState {
   // Last update timestamp
   lastUpdate: number;
   setLastUpdate: (timestamp: number) => void;
+
+  // Error message
+  error: string | null;
+  setError: (error: string | null) => void;
+  clearError: () => void;
 }
 
 export const useMapStore = create<MapState>((set) => ({
@@ -56,6 +61,7 @@ export const useMapStore = create<MapState>((set) => ({
   deviceType: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
   zoom: 13,
   lastUpdate: 0,
+  error: null,
 
   // Actions
   setVehicles: (vehicles) => set({ vehicles }),
@@ -89,4 +95,8 @@ export const useMapStore = create<MapState>((set) => ({
   setZoom: (zoom) => set({ zoom }),
 
   setLastUpdate: (lastUpdate) => set({ lastUpdate }),
+
+  setError: (error) => set({ error }),
+
+  clearError: () => set({ error: null }),
 }));

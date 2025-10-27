@@ -11,6 +11,7 @@ import type { Stop } from '../types';
 
 export function useStops() {
   const setStops = useMapStore((state) => state.setStops);
+  const setError = useMapStore((state) => state.setError);
 
   // Use React Query for data fetching - only fetch once
   const { data: stopsArray, error, isLoading } = useQuery({
@@ -34,6 +35,13 @@ export function useStops() {
       setStops(stopsMap);
     }
   }, [stopsArray, setStops]);
+
+  // Show error in snackbar when fetch fails
+  useEffect(() => {
+    if (error) {
+      setError(`Failed to fetch stops: ${(error as Error).message}`);
+    }
+  }, [error, setError]);
 
   return {
     stops: stopsArray || [],

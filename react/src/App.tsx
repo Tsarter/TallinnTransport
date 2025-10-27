@@ -11,6 +11,7 @@ import { VehiclesLayer } from './components/VehiclesLayer';
 import { StopsLayer } from './components/StopsLayer';
 import { RoutePolyline } from './components/RoutePolyline';
 import { MapClickHandler } from './components/MapClickHandler';
+import { Snackbar } from './components/Snackbar';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -35,6 +36,7 @@ function App() {
           <LocationButton />
         </Map>
         <FeedbackButton />
+        <Snackbar />
       </div>
     </QueryClientProvider>
   );

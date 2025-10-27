@@ -11,6 +11,7 @@ import { parseInterruptions } from '../../../shared/utils.js';
 
 export function useInterruptions() {
   const setInterruptions = useMapStore((state) => state.setInterruptions);
+  const setError = useMapStore((state) => state.setError);
 
   const { data, error, isLoading } = useQuery({
     queryKey: ['interruptions'],
@@ -28,6 +29,13 @@ export function useInterruptions() {
       setInterruptions(data);
     }
   }, [data, setInterruptions]);
+
+  // Show error in snackbar when fetch fails (but don't block the app)
+  useEffect(() => {
+    if (error) {
+      setError(`Failed to fetch service interruptions: ${(error as Error).message}`);
+    }
+  }, [error, setError]);
 
   return {
     interruptions: data || {},

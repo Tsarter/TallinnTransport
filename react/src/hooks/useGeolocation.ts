@@ -67,7 +67,17 @@ export function useGeolocation(): UseGeolocationReturn {
     }
 
     setLoading(true);
-    navigator.geolocation.getCurrentPosition(handleSuccess, handleError);
+    setError(null); // Clear previous errors
+
+    navigator.geolocation.getCurrentPosition(
+      handleSuccess,
+      handleError,
+      {
+        enableHighAccuracy: true,
+        timeout: 10000, // 10 second timeout
+        maximumAge: 0 // Don't use cached position
+      }
+    );
   }, [handleSuccess, handleError]);
 
   // Start watching user's location (continuous updates)
@@ -83,8 +93,17 @@ export function useGeolocation(): UseGeolocationReturn {
     }
 
     setLoading(true);
+    setError(null); // Clear previous errors
 
-    const id = navigator.geolocation.watchPosition(handleSuccess, handleError);
+    const id = navigator.geolocation.watchPosition(
+      handleSuccess,
+      handleError,
+      {
+        enableHighAccuracy: true,
+        timeout: 10000, // 10 second timeout
+        maximumAge: 0 // Don't use cached position
+      }
+    );
     setWatchId(id);
   }, [watchId, handleSuccess, handleError]);
 

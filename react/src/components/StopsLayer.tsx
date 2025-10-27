@@ -4,13 +4,18 @@
  * Optimized to reduce re-renders during map movement
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useMapEvents } from 'react-leaflet';
 import { useStops } from '../hooks/useStops';
 import { useRouteStops } from '../hooks/useRouteStops';
 import { useMapStore } from '../store/mapStore';
 import { StopMarker } from './StopMarker';
 import { STOP_VISIBILITY } from '../../../shared/constants.js';
+
+interface MapViewState {
+  zoom: number;
+  bounds: L.LatLngBounds | null;
+}
 
 export function StopsLayer() {
   const { stops } = useStops();
@@ -19,23 +24,51 @@ export function StopsLayer() {
   const selectedStop = useMapStore((state) => state.selectedStop);
   const selectedRoute = useMapStore((state) => state.selectedRoute);
 
-  const [zoom, setZoom] = useState(13);
-  const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
+  // Use single state object to batch updates (prevents double re-render)
+  const [mapView, setMapView] = useState<MapViewState>({
+    zoom: 13,
+    bounds: null,
+  });
+
+  // Throttle updates to max once per 50ms during rapid zoom
+  const updateTimeoutRef = useRef<number | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Throttled update function
+  const updateMapView = useCallback((zoom: number, bounds: L.LatLngBounds) => {
+    // Clear any pending update
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    // Schedule update with slight delay to batch rapid events
+    updateTimeoutRef.current = setTimeout(() => {
+      setMapView({ zoom, bounds });
+      updateTimeoutRef.current = null;
+    }, 50); // 50ms throttle - imperceptible to user but prevents stuttering
+  }, []);
 
   // Only update when movement/zoom stops - no intermediate updates
   const map = useMapEvents({
     zoomend: () => {
-      setZoom(map.getZoom());
-      setBounds(map.getBounds());
+      updateMapView(map.getZoom(), map.getBounds());
     },
     moveend: () => {
-      setBounds(map.getBounds());
+      updateMapView(map.getZoom(), map.getBounds());
     },
   });
 
   // Initialize bounds on mount
-  if (!bounds && map) {
-    setBounds(map.getBounds());
+  if (!mapView.bounds && map) {
+    setMapView({ zoom: map.getZoom(), bounds: map.getBounds() });
   }
 
   // Determine minimum zoom for stop visibility
@@ -56,7 +89,7 @@ export function StopsLayer() {
     }
 
     // Don't show stops if zoom is too low (when no route selected)
-    if (zoom < minZoom) {
+    if (mapView.zoom < minZoom) {
       // Exception: always show selected stop
       if (selectedStop) {
         return [selectedStop];
@@ -64,7 +97,7 @@ export function StopsLayer() {
       return [];
     }
 
-    if (!bounds) return [];
+    if (!mapView.bounds) return [];
 
     // Filter stops within bounds (when no route selected)
     return stops.filter((stop) => {
@@ -74,9 +107,9 @@ export function StopsLayer() {
       }
 
       // Check if stop is within bounds
-      return bounds.contains([stop.lat, stop.lon]);
+      return mapView.bounds!.contains([stop.lat, stop.lon]);
     });
-  }, [stops, zoom, minZoom, bounds, selectedStop, selectedRoute.line, routeStopIds]);
+  }, [stops, mapView.zoom, mapView.bounds, minZoom, selectedStop, selectedRoute.line, routeStopIds]);
 
   return (
     <>
