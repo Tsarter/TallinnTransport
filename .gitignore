@@ -10,3 +10,4 @@ node/gif_maker_for/images/
 secret_*
 **/cache/
 changelog.md
+dist/*

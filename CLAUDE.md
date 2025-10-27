@@ -677,20 +677,47 @@ Real-time data collection runs as background service:
 
 Daily scraper typically runs at 04:00 via cron or systemd timer
 
-### Node Services
+### Node Services (systemd)
 
 **Server (port 3000):**
 ```bash
+# Service: node-server (or node-server.service)
+# Runs: src/server.js from node/server_for/
+# Purpose: Main API server for historical data queries
+
+# Status/logs
+sudo systemctl status node-server
+journalctl -u node-server -f
+
+# Restart after code changes
+sudo systemctl restart node-server
+
+# Manual start (for development)
 cd /home/tanel/Documents/public_transport_project/iaib/node/server_for
 npm install
-npm start  # Runs src/server.js
+npm start
 ```
 
 **Proxy (port 3001):**
 ```bash
+# Service: transport_proxy (or transport_proxy.service)
+# Runs: dist/realtime.js from node/proxy_for/
+# Purpose: Handles realtime endpoints, caching, CORS workaround
+
+# Build TypeScript
 cd /home/tanel/Documents/public_transport_project/iaib/node/proxy_for
-npm run build  # Compiles TypeScript
-npm start      # Runs compiled realtime.js
+npm run build  # Compiles TypeScript to dist/
+
+# Restart after code changes (IMPORTANT: must rebuild first!)
+sudo systemctl restart transport_proxy
+
+# Status/logs
+sudo systemctl status transport_proxy
+journalctl -u transport_proxy -f
+
+# Manual start (for development)
+cd /home/tanel/Documents/public_transport_project/iaib/node/proxy_for
+node dist/realtime.js
 ```
 
 ### Nginx Reverse Proxy (implied)

@@ -11,3 +11,4 @@ nvm use default
 
 # Build for production
 npm run build
+
