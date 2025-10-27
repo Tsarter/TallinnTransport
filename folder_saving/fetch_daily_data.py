@@ -9,7 +9,6 @@ import sys
 from email.utils import parsedate_to_datetime
 
 from config import (
-    GFTS_TALLINNA_LINNATRANSPORDI_AS_ID,
     GTFS_DATA_DIR,
     GTFS_URL,
     ROUTE_URL,
@@ -21,8 +20,8 @@ from config import (
     ANNOUNCEMENTS_URL,
     ANNOUNCEMENTS_DATA_DIR
 )
-from onlyKeepTallinnInGFTSzip import filter_gtfs_by_agency
 from notify_discord import notify_discord, notify_error_discord
+from insert_gtfs import insert_gtfs
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 from iaib.folder_saving.insert_routes_geom import insert_routes_geom
@@ -152,6 +151,7 @@ def download_file(url):
 def fetch_daily_data():
         try:
             fetch_gfts_data()
+            insert_gtfs()
             fetch_announcements_data()
             bus_time_data = fetch_bus_times_data()
             fetch_stops_data()

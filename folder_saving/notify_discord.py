@@ -13,9 +13,6 @@ from config import (
 
 from secret_config import DISCORD_WEBHOOK_URL
 
-
-
-
 def get_folder_size(path):
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(path):

@@ -79,7 +79,7 @@ def truncate_table(cursor, table_name):
     except Exception as e:
         print(f"❌ Failed to truncate {table_name}: {e}")
 
-def main():
+def insert_gtfs():
     with zipfile.ZipFile(gtfs_zip_path, 'r') as zip_file:
         routes_df = read_gtfs_file(zip_file, "routes.txt")
         shapes_df = read_gtfs_file(zip_file, "shapes.txt")
@@ -174,4 +174,4 @@ def main():
     print("✅ GTFS data imported successfully.")
 
 if __name__ == "__main__":
-    main()
+    insert_gtfs()

@@ -24,6 +24,10 @@ apicache.clear();
 const app = express();
 app.use(cors());
 
+// Cache for Elron train data (to avoid rate limiting)
+let elronCache: { data: string; timestamp: number } | null = null;
+const ELRON_CACHE_DURATION = 30000; // 30 seconds
+
 // Configure the proxy middleware
 app.get(
   "/gps",
@@ -33,46 +37,72 @@ app.get(
     try {
       const time = Date.now();
       const tltUrl = "https://transport.tallinn.ee/gps.txt?" + time;
-      const elronUrl = "https://elron.ee/map_data.json?nocache=" + time;
 
+      // Fetch TLT data (always fresh)
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 2000);
-      let errorMsg = "";
-      //console.log(`Fetching GPS data from: ${url}`);
-      const tltPromise = fetch(tltUrl, { signal: controller.signal });
-      const elronPromise = fetch(elronUrl, { signal: controller.signal });
-      let tltResponse, elronResponse;
+      let tltResponse;
       try {
-        [tltResponse, elronResponse] = await Promise.all([
-          tltPromise,
-          elronPromise,
-        ]);
+        tltResponse = await fetch(tltUrl, { signal: controller.signal });
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
-          errorMsg += `Fetch request timed out for ${req.url}`;
+          console.error(`TLT fetch request timed out`);
         } else {
-          errorMsg += String(err);
+          console.error(`TLT fetch error:`, err);
         }
       } finally {
         clearTimeout(timeout);
       }
 
-      if (!tltResponse?.ok && !elronResponse?.ok) {
+      if (!tltResponse?.ok) {
         return res
           .status(tltResponse?.status || 500)
-          .send("Error fetching GPS data for both TLT and Elron");
+          .send("Error fetching TLT GPS data");
       }
 
       // Fetch TLT data (buses, trams, trolleys)
-      let tltData = tltResponse?.ok ? await tltResponse.text() : "";
+      let tltData = await tltResponse.text();
 
-      // Fetch Elron data (trains) and convert to CSV format
+      // Fetch or use cached Elron data (trains) - only fetch every 30 seconds
       let elronCsv = "";
-      if (elronResponse?.ok) {
-        const elronJson = await elronResponse.json() as ElronApiResponse;
-        if (elronJson.status === 1 && elronJson.data && elronJson.data.length > 0) {
-          elronCsv = mapElronTrainsToCsv(elronJson.data);
+      const now = Date.now();
+
+      if (!elronCache || (now - elronCache.timestamp) > ELRON_CACHE_DURATION) {
+        // Cache expired or doesn't exist, fetch new data
+        try {
+          const elronUrl = "https://elron.ee/map_data.json?nocache=" + time;
+          const elronController = new AbortController();
+          const elronTimeout = setTimeout(() => elronController.abort(), 5000); // Longer timeout for Elron
+
+          const elronResponse = await fetch(elronUrl, { signal: elronController.signal });
+          clearTimeout(elronTimeout);
+
+          if (elronResponse.ok) {
+            const elronText = await elronResponse.text();
+            if (elronText && elronText.length > 0) {
+              const elronJson = JSON.parse(elronText) as ElronApiResponse;
+              if (elronJson.status === 1 && elronJson.data && elronJson.data.length > 0) {
+                elronCsv = mapElronTrainsToCsv(elronJson.data);
+                // Update cache
+                elronCache = { data: elronCsv, timestamp: now };
+                console.log(`Elron data cached: ${elronJson.data.length} trains`);
+              }
+            } else {
+              console.warn('Elron API returned empty response');
+            }
+          } else {
+            console.warn(`Elron API returned status ${elronResponse.status}`);
+          }
+        } catch (elronError) {
+          console.warn('Failed to fetch Elron data, using cached data if available');
+          // Use cached data if available
+          if (elronCache) {
+            elronCsv = elronCache.data;
+          }
         }
+      } else {
+        // Use cached data
+        elronCsv = elronCache.data;
       }
 
       // Combine TLT and Elron data
