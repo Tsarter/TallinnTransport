@@ -13,7 +13,7 @@ let cache = apicache.middleware;
 import { getRouteCoordinatesFromDB } from "./utils/routeUtils.js";
 import {
   getStopsFromDB,
-  getNextDeparturesByStopId,
+  getNextDeparturesByStopThorebId,
   getStopsByRoute,
 } from "./utils/stopsUtils.js";
 import { mapTallinnLiveDeparturesResponseToJson, mapElronTrainsToCsv } from "./utils/mapper.js";
@@ -26,7 +26,7 @@ app.use(cors());
 
 // Cache for Elron train data (to avoid rate limiting)
 let elronCache: { data: string; timestamp: number } | null = null;
-const ELRON_CACHE_DURATION = 30000; // 30 seconds
+const ELRON_CACHE_DURATION = 10000;
 
 // Configure the proxy middleware
 app.get(
@@ -85,7 +85,6 @@ app.get(
                 elronCsv = mapElronTrainsToCsv(elronJson.data);
                 // Update cache
                 elronCache = { data: elronCsv, timestamp: now };
-                console.log(`Elron data cached: ${elronJson.data.length} trains`);
               }
             } else {
               console.warn('Elron API returned empty response');
@@ -94,7 +93,6 @@ app.get(
             console.warn(`Elron API returned status ${elronResponse.status}`);
           }
         } catch (elronError) {
-          console.warn('Failed to fetch Elron data, using cached data if available');
           // Use cached data if available
           if (elronCache) {
             elronCsv = elronCache.data;
@@ -170,16 +168,16 @@ app.get("/route/stops", cache("6 hours"), async (req, res) => {
   }
 });
 
-app.get("/stops/:stopId/departures", async (req, res) => {
+app.get("/stops/:stopThorebId/departures", async (req, res) => {
   try {
-    const stopId = parseInt(req.params.stopId, 10);
+    const stopThorebId = parseInt(req.params.stopThorebId, 10);
     req.query.limit = req.query.limit as string || "5";
     const limit = Math.min(parseInt(req.query.limit, 10), 20);
-    if (isNaN(stopId)) {
-      return res.status(400).json({ error: "Invalid or missing stopId" });
+    if (isNaN(stopThorebId)) {
+      return res.status(400).json({ error: "Invalid or missing stopThorebId" });
     }
     const url =
-      "https://transport.tallinn.ee/siri-stop-departures.php?stopid=" + stopId;
+      "https://transport.tallinn.ee/siri-stop-departures.php?stopid=" + stopThorebId;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2000);
@@ -187,7 +185,7 @@ app.get("/stops/:stopId/departures", async (req, res) => {
     let fetchPromise = fetch(url, { signal: controller.signal }).finally(() =>
       clearTimeout(timeout)
     );
-    let dbPromise = getNextDeparturesByStopId(stopId);
+    let dbPromise = getNextDeparturesByStopThorebId(stopThorebId);
     let response, departures;
     try {
       [response, departures] = await Promise.all([fetchPromise, dbPromise]);

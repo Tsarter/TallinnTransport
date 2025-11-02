@@ -11,7 +11,7 @@ export async function getStopsFromDB() {
   return stops;
 }
 
-export async function getNextDeparturesByStopId(stopId : number) {
+export async function getNextDeparturesByStopThorebId(stopThorebId: number) {
   let now = new Date();
   let past = new Date();
   let future = new Date();
@@ -30,10 +30,11 @@ export async function getNextDeparturesByStopId(stopId : number) {
   ][now.getDay()];
 
   const departures = await db("stop_times")
+    .join("stops", "stop_times.stop_id", "stops.stop_id")
     .join("trips", "stop_times.trip_id", "trips.trip_id")
     .join("routes", "trips.route_id", "routes.route_id")
     .join("calendar", "trips.service_id", "calendar.service_id")
-    .where("stop_times.stop_id", stopId)
+    .where("stops.thoreb_id", stopThorebId)
     .whereBetween("stop_times.departure_time", [pastTime, futureTime])
     .where(`calendar.${currentDay}`, 1)
     .orderBy("stop_times.departure_time")
@@ -81,7 +82,8 @@ export async function getStopsByRoute(params: {
       "stops.stop_name",
       db.raw("ST_Y(stops.location) as lat"),
       db.raw("ST_X(stops.location) as lon"),
-      "stop_times.stop_sequence"
+      "stop_times.stop_sequence",
+      "stops.thoreb_id"
     )
     .orderBy("stop_times.stop_sequence");
 
