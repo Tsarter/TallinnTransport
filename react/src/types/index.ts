@@ -7,6 +7,7 @@ export interface Stop {
   stop_name: string;
   lat: number;
   lon: number;
+  thoreb_id: string;
 }
 
 export interface Departure {

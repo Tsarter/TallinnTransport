@@ -9,7 +9,7 @@ import { useMapStore } from '../store/mapStore';
 import { fetchGPSData, parseGPSData } from '../../../shared/api.js';
 import type { Vehicle } from '../types';
 
-const UPDATE_INTERVAL = 6000; // 6 seconds
+const UPDATE_INTERVAL = 5000; // 5 seconds
 
 export function useVehicles() {
   const setVehicles = useMapStore((state) => state.setVehicles);

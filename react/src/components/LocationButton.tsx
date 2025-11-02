@@ -5,6 +5,7 @@
 import { useGeolocation } from '../hooks/useGeolocation';
 import { useMap } from 'react-leaflet';
 import { useEffect, useState, useRef } from 'react';
+import { useMapStore } from '../store/mapStore';
 
 interface LocationButtonProps {
   zoom?: number;
@@ -12,8 +13,10 @@ interface LocationButtonProps {
 
 export function LocationButton({ zoom = 15 }: LocationButtonProps) {
   const map = useMap();
-  const { location, error, loading, requestLocation } = useGeolocation();
+  const { error, loading, requestLocation } = useGeolocation();
   const [isRequesting, setIsRequesting] = useState(false);
+  const userLocation = useMapStore((state) => state.userLocation);
+
   const requestTimestampRef = useRef<number>(0);
 
   useEffect(() => {
@@ -24,9 +27,9 @@ export function LocationButton({ zoom = 15 }: LocationButtonProps) {
   }, [error]);
 
   const handleClick = () => {
-    if (location && !isRequesting) {
+    if (userLocation && !isRequesting) {
       // If we already have location, just center the map
-      map.setView([location.lat, location.lon], zoom);
+      map.setView([userLocation.lat, userLocation.lon], zoom);
     } else if (!loading) {
       // Request location and mark timestamp
       setIsRequesting(true);
@@ -40,12 +43,12 @@ export function LocationButton({ zoom = 15 }: LocationButtonProps) {
     if (location && isRequesting) {
       // Only center if this location was received after our request
       const timeSinceRequest = Date.now() - requestTimestampRef.current;
-      if (timeSinceRequest < 15000) { // Within 15 seconds of request
-        map.setView([location.lat, location.lon], zoom);
+      if (timeSinceRequest < 15000 && userLocation) { // Within 15 seconds of request
+        map.setView([userLocation.lat, userLocation.lon], zoom);
       }
       setIsRequesting(false);
     }
-  }, [location, isRequesting, map, zoom]);
+  }, [userLocation, isRequesting, map, zoom]);
 
   return (
     <button

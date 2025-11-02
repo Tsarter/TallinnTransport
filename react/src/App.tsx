@@ -5,7 +5,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Map } from './components/Map';
 import { LocationButton } from './components/LocationButton';
-import { FeedbackButton } from './components/FeedbackButton';
+import { HamburgerMenu } from './components/HamburgerMenu';
 import { UserLocationMarker } from './components/UserLocationMarker';
 import { VehiclesLayer } from './components/VehiclesLayer';
 import { StopsLayer } from './components/StopsLayer';
@@ -35,7 +35,7 @@ function App() {
           <MapClickHandler />
           <LocationButton />
         </Map>
-        <FeedbackButton />
+        <HamburgerMenu />
         <Snackbar />
       </div>
     </QueryClientProvider>

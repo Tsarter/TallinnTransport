@@ -20,8 +20,8 @@ export function useStops() {
       const stops = await fetchStops();
       return stops as Stop[];
     },
-    staleTime: Infinity, // Stops don't change, cache forever
-    gcTime: Infinity, // Keep in cache forever
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours in ms
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours in ms
   });
 
   // Update Zustand store when stops change

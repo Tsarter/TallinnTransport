@@ -31,9 +31,9 @@ export function StopPopupContent({ stop, onRouteSelect }: StopPopupContentProps)
 
   // Fetch departures for this stop
   const { data: departures, isLoading, error } = useQuery({
-    queryKey: ['stop-departures', stop.stop_id],
+    queryKey: ['stop-departures', stop.thoreb_id],
     queryFn: async () => {
-      const deps = await fetchStopDepartures(stop.stop_id, 10);
+      const deps = await fetchStopDepartures(stop.thoreb_id, 10);
       return deps as Departure[];
     },
     staleTime: 30000, // Refresh every 30 seconds

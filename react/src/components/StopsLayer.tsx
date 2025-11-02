@@ -78,14 +78,14 @@ export function StopsLayer() {
   // Create a Set of route stop IDs for efficient lookup
   const routeStopIds = useMemo(() => {
     if (!routeStops) return null;
-    return new Set(routeStops.map((stop) => stop.stop_id));
+    return new Set(routeStops.map((stop) => stop.thoreb_id));
   }, [routeStops]);
 
   // Filter stops based on zoom, bounds, and selected route
   const visibleStops = useMemo(() => {
     // If a route is selected, show all stops for that route regardless of zoom
     if (selectedRoute.line && routeStopIds) {
-      return stops.filter((stop) => routeStopIds.has(stop.stop_id));
+      return stops.filter((stop) => routeStopIds.has(stop.thoreb_id));
     }
 
     // Don't show stops if zoom is too low (when no route selected)
@@ -102,7 +102,7 @@ export function StopsLayer() {
     // Filter stops within bounds (when no route selected)
     return stops.filter((stop) => {
       // Always show selected stop
-      if (selectedStop && stop.stop_id === selectedStop.stop_id) {
+      if (selectedStop && stop.thoreb_id === selectedStop.thoreb_id) {
         return true;
       }
 
@@ -114,7 +114,7 @@ export function StopsLayer() {
   return (
     <>
       {visibleStops.map((stop) => (
-        <StopMarker key={stop.stop_id} stop={stop} />
+        <StopMarker key={stop.thoreb_id} stop={stop} />
       ))}
     </>
   );

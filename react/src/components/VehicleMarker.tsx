@@ -18,7 +18,8 @@ interface VehicleMarkerProps {
   shouldAnimate: boolean;
 }
 
-const ANIMATION_DURATION = 6000; // 6 seconds
+const ANIMATION_DURATION = 5000;
+const TRAIN_ANIMATION_DURATION = 10000;
 
 export const VehicleMarker = memo(function VehicleMarker({
   vehicle,
@@ -93,8 +94,15 @@ export const VehicleMarker = memo(function VehicleMarker({
 
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
-      const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+      // if vehicle is train, use longer duration
+      const duration =
+        vehicleTypeEstonian.toLowerCase() === 'rong'
+          ? TRAIN_ANIMATION_DURATION
+          : ANIMATION_DURATION;
+      
+      const progress = Math.min(elapsed / duration, 1);
 
+          
       // Linear interpolation
       const lat = currentLatLng.lat + (newLatLng[0] - currentLatLng.lat) * progress;
       const lng = currentLatLng.lng + (newLatLng[1] - currentLatLng.lng) * progress;
@@ -107,7 +115,15 @@ export const VehicleMarker = memo(function VehicleMarker({
       if (markerElement) {
         const imgElement = markerElement.querySelector('img');
         if (imgElement) {
-          imgElement.style.transform = `rotate(${vehicle.direction}deg)`;
+          const currentTransform = imgElement.style.transform || "rotate(0deg)";
+          const match = currentTransform.match(/-?\d+(\.\d+)?/);
+          const currentRotation = match ? parseFloat(match[0]) : 0;
+          const newRotation = vehicle.direction;
+
+          // Compute shortest angular difference (-180 to +180)
+          let delta = ((newRotation - currentRotation + 540) % 360) - 180;
+          const smoothedRotation = currentRotation + delta;
+          imgElement.style.transform = `rotate(${smoothedRotation}deg)`;
         }
       }
 
