@@ -9,6 +9,7 @@ import { useMapStore } from '../store/mapStore';
 interface UserLocation {
   lat: number;
   lon: number;
+  heading: number | null; // Direction in degrees (0-360), null if unavailable
 }
 
 interface UseGeolocationReturn {
@@ -32,6 +33,7 @@ export function useGeolocation(): UseGeolocationReturn {
     const coords = {
       lat: position.coords.latitude,
       lon: position.coords.longitude,
+      heading: position.coords.heading, // null if not available
     };
     setLocation(coords);
     setUserLocation(coords);

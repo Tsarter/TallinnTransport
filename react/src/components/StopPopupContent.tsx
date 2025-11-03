@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMapStore } from '../store/mapStore';
 import type { Stop, Departure } from '../types';
 import { fetchStopDepartures } from '../../../shared/api.js';
-import { minutesUntilTime, formattedScheduledTime } from '../../../shared/utils.js';
+import { minutesUntilTime, formattedScheduledTime, calculateWalkingTime } from '../../../shared/utils.js';
 import {
   VEHICLE_TYPES_ENGLISH_TO_ESTONIAN,
   VEHICLE_TYPES_ENGLISH_TO_NUM,
@@ -28,6 +28,13 @@ export function StopPopupContent({ stop, onRouteSelect }: StopPopupContentProps)
   const interruptions = useMapStore((state) => state.interruptions);
   const setSelectedRoute = useMapStore((state) => state.setSelectedRoute);
   const setSelectedStop = useMapStore((state) => state.setSelectedStop);
+  const userLocation = useMapStore((state) => state.userLocation);
+
+  // Calculate walking time if user location is available
+  let walkingTime: number | null = null;
+  if (userLocation) {
+    walkingTime = calculateWalkingTime(userLocation.lat, userLocation.lon, stop.lat, stop.lon);
+  }
 
   // Fetch departures for this stop
   const { data: departures, isLoading, error } = useQuery({
@@ -51,7 +58,14 @@ export function StopPopupContent({ stop, onRouteSelect }: StopPopupContentProps)
   if (isLoading) {
     return (
       <div className="stop-popup">
-        <div className="stop-popup-header">{stop.stop_name}</div>
+        <div className="stop-popup-header">
+          {stop.stop_name}
+          {walkingTime !== null && walkingTime < 10 && (
+            <span style={{ fontSize: '0.85em', fontWeight: 'normal', marginLeft: '8px', color: '#666' }}>
+              🚶 {walkingTime} min
+            </span>
+          )}
+        </div>
         <div style={{ padding: '10px' }}>Laen väljumisi...</div>
       </div>
     );
@@ -60,7 +74,14 @@ export function StopPopupContent({ stop, onRouteSelect }: StopPopupContentProps)
   if (error || !departures || departures.length === 0) {
     return (
       <div className="stop-popup">
-        <div className="stop-popup-header">{stop.stop_name}</div>
+        <div className="stop-popup-header">
+          {stop.stop_name}
+          {walkingTime !== null && walkingTime < 10 && (
+            <span style={{ fontSize: '0.85em', fontWeight: 'normal', marginLeft: '8px', color: '#666' }}>
+              🚶 {walkingTime} min
+            </span>
+          )}
+        </div>
         <div style={{ padding: '10px' }}>Väljumisi ei leitud.</div>
       </div>
     );
@@ -80,7 +101,14 @@ export function StopPopupContent({ stop, onRouteSelect }: StopPopupContentProps)
 
   return (
     <div className="stop-popup">
-      <div className="stop-popup-header">{stop.stop_name}</div>
+      <div className="stop-popup-header">
+        {stop.stop_name}
+        {walkingTime !== null && walkingTime < 10 && (
+          <span style={{ fontSize: '0.85em', fontWeight: 'normal', marginLeft: '8px', color: '#666' }}>
+            🚶 {walkingTime} min
+          </span>
+        )}
+      </div>
       {Object.entries(grouped).map(([routeId, deps]) => {
         // Sort and take top 3
         const sortedDeps = deps.sort(

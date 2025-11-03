@@ -18,8 +18,8 @@ interface VehicleMarkerProps {
   shouldAnimate: boolean;
 }
 
-const ANIMATION_DURATION = 5000;
-const TRAIN_ANIMATION_DURATION = 10000;
+const ANIMATION_DURATION = 5500;
+const TRAIN_ANIMATION_DURATION = 10500;
 
 export const VehicleMarker = memo(function VehicleMarker({
   vehicle,

@@ -14,6 +14,22 @@ interface MapProps {
   children?: React.ReactNode;
 }
 
+// Helper component to set up custom panes
+function MapPaneSetup() {
+  const map = useMap();
+
+  useEffect(() => {
+    // Create custom pane for user location marker with high z-index
+    // Default markerPane is 600, so we set this to 650 to be on top
+    if (!map.getPane('userLocationPane')) {
+      const pane = map.createPane('userLocationPane');
+      pane.style.zIndex = '650';
+    }
+  }, [map]);
+
+  return null;
+}
+
 // Helper component to access map instance
 function MapController({ onMapReady }: { onMapReady?: (map: L.Map) => void }) {
   const map = useMap();
@@ -45,6 +61,7 @@ export function Map({
         maxZoom={18}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
+      <MapPaneSetup />
       <MapController onMapReady={onMapReady} />
       {children}
     </MapContainer>

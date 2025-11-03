@@ -9,7 +9,7 @@
  * @returns {number} Minutes until the specified time (can be negative if time has passed)
  */
 export function minutesUntilTime(hhmmss, now = new Date()) {
-  const [h, m, s] = hhmmss.split(':').map(Number);
+  const [h, m, s] = hhmmss.split(":").map(Number);
 
   const departure = new Date(now);
   departure.setHours(h, m, s, 0);
@@ -32,22 +32,24 @@ export function minutesUntilTime(hhmmss, now = new Date()) {
  */
 export function formattedScheduledTime(scheduledTime, departureTime) {
   // Format departure time to show only hours and rounded minutes, no seconds
-  let [h, m, s] = scheduledTime.split(':').map(Number);
+  let [h, m, s] = scheduledTime.split(":").map(Number);
   if (s >= 30) m += 1;
   if (m === 60) {
     m = 0;
     h += 1;
   }
-  const formattedTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  const formattedTime = `${h.toString().padStart(2, "0")}:${m
+    .toString()
+    .padStart(2, "0")}`;
 
-  const [hours, minutes, seconds] = scheduledTime.split(':');
+  const [hours, minutes, seconds] = scheduledTime.split(":");
   const scheduledTimeDate = new Date();
   scheduledTimeDate.setHours(hours, minutes, seconds, 0);
 
   const minTil = minutesUntilTime(departureTime, scheduledTimeDate);
-  let minutesSup = '';
-  if (minTil == '0') {
-    minutesSup = '';
+  let minutesSup = "";
+  if (minTil == "0") {
+    minutesSup = "";
   } else if (minTil > 0) {
     minutesSup = `<sup class="minutesSup">+${minTil}</sup>`;
   } else if (minTil < 0) {
@@ -62,7 +64,7 @@ export function formattedScheduledTime(scheduledTime, departureTime) {
  * @returns {string} 'Mobile' or 'Desktop'
  */
 export function detectDevice() {
-  return /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop';
+  return /Mobi|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
 }
 
 /**
@@ -72,7 +74,7 @@ export function detectDevice() {
  * @returns {string} Icon filename
  */
 export function getVehicleIconName(iconType, ongoingInterruption) {
-  return `${iconType}${ongoingInterruption ? 'Warning' : ''}Icon.svg`;
+  return `${iconType}${ongoingInterruption ? "Warning" : ""}Icon.svg`;
 }
 
 /**
@@ -94,15 +96,15 @@ export function parseInterruptions(rawInterruptions) {
   const interruptions = {};
 
   for (const data of rawInterruptions) {
-    for (const route of data.routes.split(',')) {
-      let cleanedRoute = '';
-      let destination = '';
+    for (const route of data.routes.split(",")) {
+      let cleanedRoute = "";
+      let destination = "";
 
-      if (route.includes('->')) {
-        [cleanedRoute, destination] = route.split('->').map(s => s.trim());
+      if (route.includes("->")) {
+        [cleanedRoute, destination] = route.split("->").map((s) => s.trim());
       } else {
         cleanedRoute = route.trim();
-        destination = 'both';
+        destination = "both";
       }
 
       const interruption = {
@@ -131,28 +133,75 @@ export function parseInterruptions(rawInterruptions) {
  * @param {boolean} noLineBreaks - Whether to format without line breaks
  * @returns {Object} {announcement, ongoingInterruption}
  */
-export function checkInterruption(interruptions, lineNum, vehicleType, destination, noLineBreaks = false) {
+export function checkInterruption(
+  interruptions,
+  lineNum,
+  vehicleType,
+  destination,
+  noLineBreaks = false
+) {
   const wholeInterruptionKey = `${lineNum}-${vehicleType}-both`;
   const partialInterruptionKey = `${lineNum}-${vehicleType}-${destination}`;
 
-  let announcement = '';
+  let announcement = "";
   let ongoingInterruption = false;
 
-  if (wholeInterruptionKey in interruptions || partialInterruptionKey in interruptions) {
-    const interruption = wholeInterruptionKey in interruptions
-      ? interruptions[wholeInterruptionKey]
-      : interruptions[partialInterruptionKey];
+  if (
+    wholeInterruptionKey in interruptions ||
+    partialInterruptionKey in interruptions
+  ) {
+    const interruption =
+      wholeInterruptionKey in interruptions
+        ? interruptions[wholeInterruptionKey]
+        : interruptions[partialInterruptionKey];
 
-    const info = interruption.info || '';
-    announcement = interruption.announcement || '';
+    const info = interruption.info || "";
+    announcement = interruption.announcement || "";
 
     if (info) {
       announcement = noLineBreaks
-        ? info + ' ' + announcement
-        : '<br>' + info + '<br>' + announcement;
+        ? info + " " + announcement
+        : "<br>" + info + "<br>" + announcement;
     }
     ongoingInterruption = true;
   }
 
   return { announcement, ongoingInterruption };
+}
+
+/**
+ * Calculate straight-line distance between two coordinates using Haversine formula
+ * @param {number} lat1 - Latitude of first point
+ * @param {number} lon1 - Longitude of first point
+ * @param {number} lat2 - Latitude of second point
+ * @param {number} lon2 - Longitude of second point
+ * @returns {number} Distance in kilometers
+ */
+export function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Calculate walking time between two coordinates
+ * Assumes average walking speed of 5 km/h
+ * @param {number} lat1 - Latitude of first point
+ * @param {number} lon1 - Longitude of first point
+ * @param {number} lat2 - Latitude of second point
+ * @param {number} lon2 - Longitude of second point
+ * @returns {number} Walking time in minutes
+ */
+export function calculateWalkingTime(lat1, lon1, lat2, lon2) {
+  const distanceKm = calculateDistance(lat1, lon1, lat2, lon2);
+  const walkingSpeedKmPerHour = 4.2;
+  return Math.ceil((distanceKm / walkingSpeedKmPerHour) * 60);
 }

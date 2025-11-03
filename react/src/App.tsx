@@ -12,6 +12,7 @@ import { StopsLayer } from './components/StopsLayer';
 import { RoutePolyline } from './components/RoutePolyline';
 import { MapClickHandler } from './components/MapClickHandler';
 import { Snackbar } from './components/Snackbar';
+import { Seo } from './seo';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app">
+        <Seo />
         <Map>
           <VehiclesLayer />
           <StopsLayer />

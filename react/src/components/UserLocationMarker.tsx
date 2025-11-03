@@ -2,9 +2,9 @@
  * UserLocationMarker component to display user's current location on the map
  */
 
-import { CircleMarker, Popup } from 'react-leaflet';
-import { useEffect } from 'react';
-import { useGeolocation } from '../hooks/useGeolocation';
+import { CircleMarker, Popup } from "react-leaflet";
+import { useEffect } from "react";
+import { useGeolocation } from "../hooks/useGeolocation";
 
 export function UserLocationMarker() {
   const { location, requestLocation, watchLocation } = useGeolocation();
@@ -28,13 +28,14 @@ export function UserLocationMarker() {
   return (
     <CircleMarker
       center={[location.lat, location.lon]}
-      radius={7}
+      radius={10}
       pathOptions={{
-        color: 'white',
-        fillColor: 'blue',
+        color: "white",
+        fillColor: "blue",
         fillOpacity: 0.8,
         weight: 2,
       }}
+      pane="userLocationPane"
     >
       <Popup>Sinu asukoht</Popup>
     </CircleMarker>

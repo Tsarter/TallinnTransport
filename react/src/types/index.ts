@@ -58,6 +58,7 @@ export type DeviceType = 'Mobile' | 'Desktop';
 export interface UserLocation {
   lat: number;
   lon: number;
+  heading: number | null; // Direction in degrees (0-360), null if unavailable
 }
 
 export interface MapBounds {

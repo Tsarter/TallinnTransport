@@ -15,3 +15,17 @@ export function checkInterruption(
   destination: string,
   noLineBreaks?: boolean
 ): { announcement: string; ongoingInterruption: boolean };
+
+export function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number;
+
+export function calculateWalkingTime(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number;
