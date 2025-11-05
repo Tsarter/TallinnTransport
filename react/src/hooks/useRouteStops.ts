@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMapStore } from '../store/mapStore';
-import { fetchRouteStops } from '../../../shared/api.js';
+import { fetchRouteStops } from '../shared/api';
 import type { Stop } from '../types';
 
 export function useRouteStops() {

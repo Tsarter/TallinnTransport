@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useMapStore } from '../store/mapStore';
-import { fetchStops } from '../../../shared/api.js';
+import { fetchStops } from '../shared/api';
 import type { Stop } from '../types';
 
 export function useStops() {

@@ -6,8 +6,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useMapStore } from '../store/mapStore';
-import { fetchInterruptions } from '../../../shared/api.js';
-import { parseInterruptions } from '../../../shared/utils.js';
+import { fetchInterruptions } from '../shared/api';
+import { parseInterruptions } from '../shared/utils';
 
 export function useInterruptions() {
   const setInterruptions = useMapStore((state) => state.setInterruptions);

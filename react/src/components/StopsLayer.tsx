@@ -4,13 +4,13 @@
  * Optimized to reduce re-renders during map movement
  */
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useMapEvents } from 'react-leaflet';
-import { useStops } from '../hooks/useStops';
-import { useRouteStops } from '../hooks/useRouteStops';
-import { useMapStore } from '../store/mapStore';
-import { StopMarker } from './StopMarker';
-import { STOP_VISIBILITY } from '../../../shared/constants.js';
+import { useState, useMemo, useCallback } from "react";
+import { useMapEvents } from "react-leaflet";
+import { useStops } from "../hooks/useStops";
+import { useRouteStops } from "../hooks/useRouteStops";
+import { useMapStore } from "../store/mapStore";
+import { StopMarker } from "./StopMarker";
+import { STOP_VISIBILITY } from "../shared/constants";
 
 interface MapViewState {
   zoom: number;
@@ -30,30 +30,9 @@ export function StopsLayer() {
     bounds: null,
   });
 
-  // Throttle updates to max once per 50ms during rapid zoom
-  const updateTimeoutRef = useRef<number | null>(null);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Throttled update function
   const updateMapView = useCallback((zoom: number, bounds: L.LatLngBounds) => {
     // Clear any pending update
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-
-    // Schedule update with slight delay to batch rapid events
-    updateTimeoutRef.current = setTimeout(() => {
-      setMapView({ zoom, bounds });
-      updateTimeoutRef.current = null;
-    }, 50); // 50ms throttle - imperceptible to user but prevents stuttering
+    setMapView({ zoom, bounds });
   }, []);
 
   // Only update when movement/zoom stops - no intermediate updates
@@ -73,7 +52,9 @@ export function StopsLayer() {
 
   // Determine minimum zoom for stop visibility
   const minZoom =
-    deviceType === 'Desktop' ? STOP_VISIBILITY.DESKTOP_MIN_ZOOM : STOP_VISIBILITY.MOBILE_MIN_ZOOM;
+    deviceType === "Desktop"
+      ? STOP_VISIBILITY.DESKTOP_MIN_ZOOM
+      : STOP_VISIBILITY.MOBILE_MIN_ZOOM;
 
   // Create a Set of route stop IDs for efficient lookup
   const routeStopIds = useMemo(() => {
@@ -109,7 +90,15 @@ export function StopsLayer() {
       // Check if stop is within bounds
       return mapView.bounds!.contains([stop.lat, stop.lon]);
     });
-  }, [stops, mapView.zoom, mapView.bounds, minZoom, selectedStop, selectedRoute.line, routeStopIds]);
+  }, [
+    stops,
+    mapView.zoom,
+    mapView.bounds,
+    minZoom,
+    selectedStop,
+    selectedRoute.line,
+    routeStopIds,
+  ]);
 
   return (
     <>

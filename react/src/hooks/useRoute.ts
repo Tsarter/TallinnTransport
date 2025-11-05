@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useMapStore } from '../store/mapStore';
-import { fetchRouteData } from '../../../shared/api.js';
+import { fetchRouteData } from '../shared/api';
 import type { LatLngExpression } from 'leaflet';
 
 export function useRoute() {

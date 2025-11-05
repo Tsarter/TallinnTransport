@@ -40,10 +40,10 @@ export function LocationButton({ zoom = 15 }: LocationButtonProps) {
 
   // Center map when location is received (only if we just requested it)
   useEffect(() => {
-    if (location && isRequesting) {
+    if (userLocation && isRequesting) {
       // Only center if this location was received after our request
       const timeSinceRequest = Date.now() - requestTimestampRef.current;
-      if (timeSinceRequest < 15000 && userLocation) { // Within 15 seconds of request
+      if (timeSinceRequest < 15000) { // Within 15 seconds of request
         map.setView([userLocation.lat, userLocation.lon], zoom);
       }
       setIsRequesting(false);

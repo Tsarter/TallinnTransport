@@ -6,13 +6,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMapStore } from '../store/mapStore';
 import type { Stop, Departure } from '../types';
-import { fetchStopDepartures } from '../../../shared/api.js';
-import { minutesUntilTime, formattedScheduledTime, calculateWalkingTime } from '../../../shared/utils.js';
+import { fetchStopDepartures } from '../shared/api';
+import { minutesUntilTime, formattedScheduledTime, calculateWalkingTime } from '../shared/utils';
 import {
   VEHICLE_TYPES_ENGLISH_TO_ESTONIAN,
   VEHICLE_TYPES_ENGLISH_TO_NUM,
-} from '../../../shared/constants.js';
-import { checkInterruption, getVehicleIconName } from '../../../shared/utils.js';
+} from '../shared/constants';
+import { checkInterruption, getVehicleIconName } from '../shared/utils';
 import '../styles/stopPopup.css';
 
 interface StopPopupContentProps {

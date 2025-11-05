@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, startTransition, useRef } from 'react';
 import { useMapStore } from '../store/mapStore';
-import { fetchGPSData, parseGPSData } from '../../../shared/api.js';
+import { fetchGPSData, parseGPSData } from '../shared/api';
 import type { Vehicle } from '../types';
 
 const UPDATE_INTERVAL = 5000; // 5 seconds
@@ -29,6 +29,7 @@ export function useVehicles() {
 
       const csvData = await fetchGPSData();
       const parsedVehicles = parseGPSData(csvData);
+      
 
       // Get current vehicles to reuse unchanged references
       const currentVehicles = useMapStore.getState().vehicles;

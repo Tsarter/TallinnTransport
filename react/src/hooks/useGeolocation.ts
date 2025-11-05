@@ -19,6 +19,7 @@ interface UseGeolocationReturn {
   requestLocation: () => void;
   watchLocation: () => void;
   stopWatching: () => void;
+  checkPermission: () => Promise<PermissionState | null>;
 }
 
 export function useGeolocation(): UseGeolocationReturn {
@@ -117,6 +118,22 @@ export function useGeolocation(): UseGeolocationReturn {
     }
   }, [watchId]);
 
+  // Check geolocation permission status
+  const checkPermission = useCallback(async (): Promise<PermissionState | null> => {
+    if (!navigator.permissions) {
+      // Permissions API not supported (older browsers)
+      return null;
+    }
+
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      return result.state; // 'granted', 'prompt', or 'denied'
+    } catch (err) {
+      console.error('Permission check error:', err);
+      return null;
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -133,5 +150,6 @@ export function useGeolocation(): UseGeolocationReturn {
     requestLocation,
     watchLocation,
     stopWatching,
+    checkPermission,
   };
 }

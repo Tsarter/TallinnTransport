@@ -10,8 +10,9 @@ import type { Marker as LeafletMarker } from 'leaflet';
 import { useMemo, memo, useRef, useEffect, useCallback } from 'react';
 import { useMapStore } from '../store/mapStore';
 import type { Vehicle } from '../types';
-import { VEHICLE_TYPES_ESTONIAN } from '../../../shared/constants.js';
-import { checkInterruption, getVehicleIconName } from '../../../shared/utils.js';
+import { VEHICLE_TYPES_ESTONIAN } from '../shared/constants';
+import { checkInterruption, getVehicleIconName } from '../shared/utils';
+import '../styles/stopPopup.css';
 
 interface VehicleMarkerProps {
   vehicle: Vehicle;
@@ -182,10 +183,19 @@ export const VehicleMarker = memo(function VehicleMarker({
     });
   }, [vehicle.lineNum, vehicle.key, iconFileName, ongoingInterruption]);
 
-  // Popup content (memoized)
+  // Popup content (memoized JSX)
   const popupContent = useMemo(
-    () => `${vehicleTypeEstonian} ${vehicle.lineNum} → ${vehicle.destination} ${announcement}`,
-    [vehicleTypeEstonian, vehicle.lineNum, vehicle.destination, announcement]
+    () => (
+      <div>
+        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+          {vehicleTypeEstonian} {vehicle.lineNum} → {vehicle.destination}
+        </div>
+        {ongoingInterruption && announcement && (
+          <div className="stop-popup-interruption">{announcement}</div>
+        )}
+      </div>
+    ),
+    [vehicleTypeEstonian, vehicle.lineNum, vehicle.destination, ongoingInterruption, announcement]
   );
 
   // Check if this vehicle should be hidden based on route selection (memoized)
